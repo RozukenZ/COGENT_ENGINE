@@ -1,0 +1,927 @@
+#include "EditorUI.hpp"
+#include <array>
+#include <iostream>
+#include <cmath>
+
+namespace fs = std::filesystem;
+
+void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice physicalDevice, 
+                    VkDevice device, uint32_t queueFamily, VkQueue queue, 
+                    VkRenderPass renderPass, uint32_t minImageCount) 
+{
+    // 1. Create Descriptor Pool
+    VkDescriptorPoolSize pool_sizes[] = {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiPool);
+
+    // 2. Setup Context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    // 3. Apply Ultra Modern Theme
+    ApplyModernDarkTheme();
+
+    // 4. Setup Backend
+    ImGui_ImplGlfw_InitForVulkan(window, true);
+    
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = instance;
+    init_info.PhysicalDevice = physicalDevice;
+    init_info.Device = device;
+    init_info.QueueFamily = queueFamily;
+    init_info.Queue = queue;
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.DescriptorPool = imguiPool;
+    init_info.MinImageCount = minImageCount;
+    init_info.ImageCount = minImageCount;
+    
+    init_info.PipelineInfoMain.RenderPass = renderPass;
+    init_info.PipelineInfoMain.Subpass = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT; 
+    
+    ImGui_ImplVulkan_Init(&init_info);
+}
+
+void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime) {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    
+    if (currentState == AppState::LOADING) {
+        RenderLoadingScreen(currentState);
+    } 
+    else if (currentState == AppState::PROJECT_MENU) {
+        RenderProjectHub(currentState, showCursor);
+        
+        // [FIX UTAMA] Logic Popup dipindah ke sini agar level-nya paling atas
+        if (openFolderPopup) {
+            ImGui::OpenPopup("Select Folder"); // Panggil sekali saja saat trigger aktif
+            openFolderPopup = false;           // Matikan trigger
+            showFolderBrowser = true;
+        }
+
+        if (showFolderBrowser) {
+            RenderFolderBrowserModal();
+        }
+    } 
+    else if (currentState == AppState::EDITOR) {
+        RenderEditorWorkspace(showCursor, deltaTime);
+    }
+
+    ImGui::Render();
+}
+
+void EditorUI::Draw(VkCommandBuffer commandBuffer) {
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+}
+
+void EditorUI::Cleanup(VkDevice device) {
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    vkDestroyDescriptorPool(device, imguiPool, nullptr);
+}
+
+// ==================================================================================
+//                              ULTRA MODERN THEME
+// ==================================================================================
+
+void EditorUI::ApplyModernDarkTheme() {
+    ImGuiStyle& style = ImGui::GetStyle();
+    
+    // Spacing & Rounding - More generous and modern
+    style.WindowPadding     = ImVec2(15.0f, 15.0f);
+    style.FramePadding      = ImVec2(12.0f, 8.0f);
+    style.ItemSpacing       = ImVec2(12.0f, 10.0f);
+    style.ItemInnerSpacing  = ImVec2(8.0f, 6.0f);
+    style.IndentSpacing     = 28.0f;
+    style.ScrollbarSize     = 16.0f;
+    
+    // Rounded corners everywhere for modern look
+    style.WindowRounding    = 12.0f;
+    style.ChildRounding     = 10.0f;
+    style.FrameRounding     = 6.0f;
+    style.PopupRounding     = 10.0f;
+    style.ScrollbarRounding = 12.0f;
+    style.GrabRounding      = 6.0f;
+    style.TabRounding       = 6.0f;
+    
+    // Borders
+    style.WindowBorderSize  = 1.0f;
+    style.FrameBorderSize   = 1.0f;
+    style.PopupBorderSize   = 1.0f;
+
+    // Modern color palette - Deep dark with vibrant accents
+    ImVec4* colors = style.Colors;
+    
+    // Text
+    colors[ImGuiCol_Text]                   = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    
+    // Backgrounds - Rich dark tones
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.12f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.12f, 0.12f, 0.14f, 1.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.11f, 0.11f, 0.13f, 0.98f);
+    
+    // Borders - Subtle but visible
+    colors[ImGuiCol_Border]                 = ImVec4(0.25f, 0.25f, 0.28f, 0.60f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.30f);
+    
+    // Title bars - Slightly lighter
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.12f, 0.12f, 0.14f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+    
+    // Frames - Input fields, etc
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.18f, 0.18f, 0.20f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.22f, 0.22f, 0.25f, 1.00f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.28f, 0.28f, 0.32f, 1.00f);
+    
+    // Buttons - Modern flat design with vibrant accent
+    colors[ImGuiCol_Button]                 = ImVec4(0.20f, 0.20f, 0.24f, 1.00f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.30f, 0.52f, 0.90f, 1.00f);  // Vibrant blue
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.26f, 0.46f, 0.82f, 1.00f);
+    
+    // Accent color - Electric blue
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.35f, 0.65f, 1.00f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.35f, 0.65f, 1.00f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.45f, 0.75f, 1.00f, 1.00f);
+    
+    // Headers - Collapsible sections
+    colors[ImGuiCol_Header]                 = ImVec4(0.22f, 0.22f, 0.25f, 1.00f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.30f, 0.52f, 0.90f, 0.80f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.35f, 0.65f, 1.00f, 1.00f);
+    
+    // Separator
+    colors[ImGuiCol_Separator]              = ImVec4(0.25f, 0.25f, 0.28f, 1.00f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.35f, 0.65f, 1.00f, 0.78f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.35f, 0.65f, 1.00f, 1.00f);
+    
+    // Tabs - Modern tab design
+    colors[ImGuiCol_Tab]                    = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.35f, 0.65f, 1.00f, 0.80f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.12f, 0.12f, 0.14f, 1.00f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.18f, 0.18f, 0.22f, 1.00f);
+    
+    // Scrollbar
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.10f, 0.10f, 0.12f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.30f, 0.30f, 0.35f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.45f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.50f, 0.50f, 0.55f, 1.00f);
+}
+
+// ==================================================================================
+//                              MODERN RENDER FUNCTIONS
+// ==================================================================================
+
+void EditorUI::RenderLoadingScreen(AppState& currentState) {
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
+    ImGui::Begin("Loading", nullptr, flags);
+    
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    
+    // Animated logo with glow effect
+    ImGui::SetCursorPos(ImVec2(center.x - 180, center.y - 120));
+    
+    // Title with gradient-like effect (layered text)
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.45f, 0.85f, 0.3f));
+    ImGui::SetWindowFontScale(2.8f);
+    ImGui::SetCursorPos(ImVec2(center.x - 177, center.y - 117));
+    ImGui::Text("COGENT ENGINE");
+    ImGui::PopStyleColor();
+    
+    ImGui::SetCursorPos(ImVec2(center.x - 180, center.y - 120));
+    ImGui::SetWindowFontScale(2.8f);
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "COGENT ENGINE");
+    ImGui::SetWindowFontScale(1.0f);
+    
+    // Subtitle
+    ImGui::SetCursorPos(ImVec2(center.x - 100, center.y - 50));
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.75f, 1.0f), "Next-Gen Game Engine");
+
+    // Animated progress
+    loadingProgress += 0.008f;
+    if (loadingProgress >= 1.0f) {
+        loadingProgress = 1.0f;
+        currentState = AppState::PROJECT_MENU;
+    }
+
+    // Loading text with animation
+    ImGui::SetCursorPos(ImVec2(center.x - 220, center.y + 30));
+    const char* loadingTexts[] = {
+        "Initializing Vulkan Renderer...",
+        "Loading Core Modules...",
+        "Preparing Workspace...",
+        "Almost Ready..."
+    };
+    int textIndex = static_cast<int>(loadingProgress * 4) % 4;
+    ImGui::TextDisabled("%s", loadingTexts[textIndex]);
+    
+    // Modern progress bar with glow
+    ImGui::SetCursorPos(ImVec2(center.x - 250, center.y + 65));
+    
+    // Background bar
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+    ImGui::ProgressBar(loadingProgress, ImVec2(500, 8), "");
+    ImGui::PopStyleColor(2);
+    
+    // Progress percentage
+    ImGui::SetCursorPos(ImVec2(center.x - 20, center.y + 80));
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "%.0f%%", loadingProgress * 100);
+
+    ImGui::End();
+}
+
+void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
+    showCursor = true; 
+    
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+    ImGui::Begin("Hub", nullptr, flags);
+
+    ImGui::Columns(2, "HubSplit", false);
+    ImGui::SetColumnWidth(0, 320);
+
+    // --- LEFT SIDEBAR ---
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.08f, 0.10f, 1.0f));
+    ImGui::BeginChild("Sidebar", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
+    
+    ImGui::Dummy(ImVec2(0, 30));
+    
+    // Logo
+    ImGui::SetCursorPosX(40);
+    ImGui::SetWindowFontScale(1.5f);
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "⚡ COGENT");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::SetCursorPosX(40);
+    ImGui::TextDisabled("Game Engine Hub");
+    
+    ImGui::Dummy(ImVec2(0, 40));
+    
+    // Navigation Buttons
+    ImGui::Indent(25);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+    
+    // Logic Tab Active Color
+    ImVec4 activeBtn = ImVec4(0.35f, 0.40f, 0.45f, 1.0f); 
+    ImVec4 normalBtn = ImVec4(0.25f, 0.25f, 0.30f, 1.0f);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 0 ? activeBtn : normalBtn);
+    if (ImGui::Button("PROJECTS", ImVec2(250, 50))) selectedHubTab = 0;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 1 ? activeBtn : normalBtn);
+    if (ImGui::Button("LEARN", ImVec2(250, 50))) selectedHubTab = 1;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 2 ? activeBtn : normalBtn);
+    if (ImGui::Button("COMMUNITY", ImVec2(250, 50))) selectedHubTab = 2;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 3 ? activeBtn : normalBtn);
+    if (ImGui::Button("SETTINGS", ImVec2(250, 50))) selectedHubTab = 3;
+    ImGui::PopStyleColor();
+    
+    ImGui::PopStyleVar();
+    ImGui::Unindent(25);
+    
+    // Footer
+    ImGui::SetCursorPos(ImVec2(40, ImGui::GetWindowHeight() - 60));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.55f, 1.0f));
+    ImGui::Text("Version 1.0.0");
+    ImGui::Text("© 2026 Cogent Studios");
+    ImGui::PopStyleColor();
+    
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    ImGui::NextColumn();
+
+    // --- RIGHT PANEL (CONTENT) ---
+    ImGui::BeginChild("MainContent", ImVec2(0, 0), false);
+    
+    ImGui::Dummy(ImVec2(0, 30));
+    
+    if (selectedHubTab == 0) {
+        // Header
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.96f, 0.98f, 1.0f));
+        ImGui::SetWindowFontScale(1.8f);
+        ImGui::Text("Recent Projects");
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopStyleColor();
+        ImGui::TextDisabled("Continue where you left off");
+        
+        ImGui::Dummy(ImVec2(0, 20));
+        
+        // Search
+        ImGui::PushItemWidth(400);
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##search", "Search projects...", searchBuf, 128);
+        ImGui::PopItemWidth();
+        
+        ImGui::Dummy(ImVec2(0, 20));
+
+        // Project Cards Area
+        ImGui::BeginChild("ProjectCards", ImVec2(0, -100), false);
+        
+        // Card 1
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.14f, 0.14f, 0.17f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+        
+        ImGui::BeginChild("Card1", ImVec2(ImGui::GetContentRegionAvail().x, 100), true, ImGuiWindowFlags_NoScrollbar);
+        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("🎮 FPS Shooter Demo"); ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPos(ImVec2(20, 50)); ImGui::TextDisabled("D:/Dev/FPS_Demo");
+        ImGui::SetCursorPos(ImVec2(20, 70)); ImGui::TextDisabled("Last modified: 2 hours ago");
+        
+        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("OPEN", ImVec2(100, 40))) { currentState = AppState::EDITOR; showCursor = false; }
+        ImGui::PopStyleColor();
+        ImGui::EndChild();
+        
+        ImGui::Dummy(ImVec2(0, 15));
+        
+        // Card 2
+        ImGui::BeginChild("Card2", ImVec2(ImGui::GetContentRegionAvail().x, 100), true, ImGuiWindowFlags_NoScrollbar);
+        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("RPG Open World"); ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPos(ImVec2(20, 50)); ImGui::TextDisabled("D:/Dev/RPG_Project");
+        ImGui::SetCursorPos(ImVec2(20, 70)); ImGui::TextDisabled("Last modified: 1 day ago");
+        
+        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("OPEN##2", ImVec2(100, 40))) { currentState = AppState::EDITOR; showCursor = false; }
+        ImGui::PopStyleColor();
+        ImGui::EndChild();
+        
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        ImGui::EndChild(); // End ProjectCards
+
+        // Action Buttons (Bottom)
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        
+        // [FIX UTAMA] Set Trigger untuk Popup
+        if (ImGui::Button("NEW PROJECT", ImVec2(200, 50))) {
+            openNewProjectPopup = true; 
+        }
+        
+        ImGui::SameLine();
+        ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        if (ImGui::Button("OPEN FROM DISK", ImVec2(200, 50))) { }
+        
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+    } 
+    else {
+        ImGui::Dummy(ImVec2(0, 100));
+        ImGui::SetCursorPosX(50);
+        ImGui::TextDisabled("This section is under construction...");
+    }
+
+    // --- MODAL POPUP HANDLING (LOGIC FIX) ---
+    // Panggil OpenPopup HANYA jika trigger aktif
+    if (openNewProjectPopup) {
+        ImGui::OpenPopup("Create New Project");
+        openNewProjectPopup = false; 
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(600, 450));
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
+    if (ImGui::BeginPopupModal("Create New Project", NULL, ImGuiWindowFlags_NoResize)) {
+        
+        ImGui::SetWindowFontScale(1.5f);
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "✨ Create New Project");
+        ImGui::SetWindowFontScale(1.0f);
+        
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 20));
+        
+        ImGui::Text("Project Name");
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::PushItemWidth(-1);
+        ImGui::InputTextWithHint("##Name", "Enter project name...", projectNameBuffer, 128);
+        ImGui::PopItemWidth();
+        
+        ImGui::Dummy(ImVec2(0, 20));
+        ImGui::Text("Project Location");
+        ImGui::Dummy(ImVec2(0, 5));
+        
+        ImGui::PushItemWidth(-120);
+        char pathBuf[256];
+        strncpy(pathBuf, selectedPath.c_str(), 255);
+        ImGui::InputText("##Path", pathBuf, 256, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemWidth();
+        
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        // [FIX] Trigger Folder Browser Popup
+        if (ImGui::Button("Browse...", ImVec2(100, 0))) {
+            openFolderPopup = true; 
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::Dummy(ImVec2(0, 20));
+        ImGui::Text("Project Template");
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        static int selectedTemplate = 0;
+        ImGui::RadioButton("First Person", &selectedTemplate, 0); ImGui::SameLine(200);
+        ImGui::RadioButton("Third Person", &selectedTemplate, 1);
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::RadioButton("Vehicle", &selectedTemplate, 2); ImGui::SameLine(200);
+        ImGui::RadioButton("Blank", &selectedTemplate, 3);
+        
+        ImGui::Dummy(ImVec2(0, 30));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        float buttonWidth = 150;
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth * 2 - 30);
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("CREATE", ImVec2(buttonWidth, 40))) {
+            currentState = AppState::EDITOR;
+            showCursor = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar();
+    
+    ImGui::EndChild();
+    ImGui::End();
+}
+
+// ==================================================================================
+//                          MODERN FOLDER BROWSER
+// ==================================================================================
+
+void EditorUI::RenderFolderBrowserModal() {
+    // Set ukuran dan posisi window POPUP
+    ImGui::SetNextWindowSize(ImVec2(700, 500), ImGuiCond_Appearing);
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    // Styling khusus untuk popup ini
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
+    
+    // Mulai Modal
+    if (ImGui::BeginPopupModal("Select Folder", &showFolderBrowser, ImGuiWindowFlags_NoResize)) {
+        
+        // --- HEADER ---
+        ImGui::SetWindowFontScale(1.3f);
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "📂 Select Project Location");
+        ImGui::SetWindowFontScale(1.0f);
+        
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        // --- DRIVE SHORTCUTS ---
+        ImGui::Text("Quick Access:");
+        ImGui::SameLine();
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        // Tombol Drive (Manual karena filesystem C++ tidak punya deteksi drive cross-platform yang mudah)
+        if (ImGui::Button("C:", ImVec2(60, 30))) currentPath = "C:/";
+        ImGui::SameLine();
+        if (ImGui::Button("D:", ImVec2(60, 30))) currentPath = "D:/";
+        ImGui::SameLine();
+        if (ImGui::Button("E:", ImVec2(60, 30))) currentPath = "E:/";
+        ImGui::SameLine();
+        
+        // Tombol Home User
+        if (ImGui::Button("Home", ImVec2(80, 30))) {
+            #ifdef _WIN32
+            const char* home = getenv("USERPROFILE");
+            if (home) currentPath = std::string(home);
+            #else
+            const char* home = getenv("HOME");
+            if (home) currentPath = std::string(home);
+            #endif
+        }
+        
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        // --- NAVIGATION BAR ---
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.20f, 0.24f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        
+        // Tombol UP
+        if (ImGui::Button("⬆UP", ImVec2(70, 32))) {
+            try {
+                fs::path p = currentPath;
+                if (p.has_parent_path() && p != p.root_path()) {
+                    currentPath = p.parent_path().string();
+                }
+            } catch (...) {}
+        }
+        
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        
+        // Kolom Path (Read Only)
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+        ImGui::PushItemWidth(-1);
+        
+        char pathDisplay[512];
+        // Safety copy string
+        strncpy(pathDisplay, currentPath.c_str(), sizeof(pathDisplay) - 1);
+        pathDisplay[sizeof(pathDisplay) - 1] = '\0';
+        
+        ImGui::InputText("##CurrentPath", pathDisplay, 512, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemWidth();
+        ImGui::PopStyleColor();
+        
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 5));
+
+        // --- FOLDER LIST (CONTENT) ---
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
+        
+        // Area Scrollable
+        ImGui::BeginChild("FolderList", ImVec2(0, -90), true);
+        
+        try {
+            // Cek apakah path valid sebelum iterasi
+            if (fs::exists(currentPath) && fs::is_directory(currentPath)) {
+                bool anyFolders = false;
+                
+                // Iterasi folder dengan opsi skip_permission_denied
+                for (const auto& entry : fs::directory_iterator(currentPath, fs::directory_options::skip_permission_denied)) {
+                    // Hanya tampilkan direktori
+                    if (entry.is_directory()) {
+                        std::string dirName;
+                        try { 
+                            dirName = entry.path().filename().string(); 
+                        } catch (...) { continue; } // Skip jika nama folder encoding error
+
+                        // Skip folder sistem / hidden (biasanya diawali titik atau $)
+                        if (dirName.empty() || dirName[0] == '$' || dirName[0] == '.') continue;
+
+                        anyFolders = true;
+                        std::string label = "📁  " + dirName;
+                        
+                        // Style item list
+                        ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
+                        
+                        // Seleksi folder (Masuk ke dalam)
+                        if (ImGui::Selectable(label.c_str(), false, 0, ImVec2(0, 30))) {
+                            currentPath = entry.path().string();
+                        }
+                        ImGui::PopStyleVar();
+                        
+                        // Tooltip path lengkap saat hover
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("%s", entry.path().string().c_str());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                }
+                
+                if (!anyFolders) {
+                    ImGui::Dummy(ImVec2(0, 50));
+                    ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
+                    ImGui::TextDisabled("No folders found");
+                }
+            } else {
+                ImGui::Dummy(ImVec2(0, 50));
+                ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 80);
+                ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "⚠️ Invalid directory path");
+            }
+        } 
+        catch (...) {
+            // Catch-all block agar aplikasi TIDAK CRASH saat akses folder bermasalah
+            ImGui::Dummy(ImVec2(0, 50));
+            ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
+            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "❌ Access Denied");
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+
+        // --- FOOTER BUTTONS ---
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+
+        float buttonWidth = 180;
+        // Posisikan tombol di kanan bawah
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth * 2 - 30);
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        
+        // Tombol Cancel
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
+            showFolderBrowser = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        
+        // Tombol Select
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("✓ SELECT THIS FOLDER", ImVec2(buttonWidth, 40))) {
+            selectedPath = currentPath; // Simpan path ke variabel utama
+            showFolderBrowser = false;  // Tutup browser
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+
+        ImGui::EndPopup();
+    }
+    
+    // Kembalikan style rounding modal
+    ImGui::PopStyleVar();
+}
+
+// ==================================================================================
+//                          MODERN EDITOR WORKSPACE
+// ==================================================================================
+
+void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
+    
+    // Top Menu Bar - Sleek and minimal
+    if (ImGui::BeginMainMenuBar()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        ImGui::Text("⚡");
+        ImGui::PopStyleColor();
+        ImGui::Text("COGENT ENGINE");
+        
+        ImGui::Separator();
+        
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("💾 Save", "Ctrl+S")) {}
+            if (ImGui::MenuItem("📂 Open Scene", "Ctrl+O")) {}
+            ImGui::Separator();
+            if (ImGui::MenuItem("❌ Exit", "Alt+F4")) exit(0);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("↩️ Undo", "Ctrl+Z")) {}
+            if (ImGui::MenuItem("↪️ Redo", "Ctrl+Y")) {}
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Window")) {
+            if (ImGui::MenuItem("📊 Performance")) {}
+            if (ImGui::MenuItem("🔧 Tools")) {}
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("📖 Documentation")) {}
+            if (ImGui::MenuItem("ℹ️ About")) {}
+            ImGui::EndMenu();
+        }
+        
+        // Right-aligned info
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 200);
+        ImGui::TextDisabled("FPS: %.0f", 1.0f / deltaTime);
+        
+        ImGui::EndMainMenuBar();
+    }
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    
+    // Modern Toolbar with rounded buttons
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20));
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, 60));
+    
+    ImGuiWindowFlags barFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | 
+                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
+    
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.10f, 0.95f));
+    ImGui::Begin("Toolbar", nullptr, barFlags);
+        
+        ImGui::Dummy(ImVec2(0, 8)); 
+        ImGui::SameLine(viewport->Size.x / 2 - 150); 
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.60f, 0.30f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.70f, 0.35f, 1.0f));
+        if(ImGui::Button("▶️ PLAY", ImVec2(90, 40))) {}
+        ImGui::PopStyleColor(2);
+        
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.50f, 0.20f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.60f, 0.25f, 1.0f));
+        if(ImGui::Button("⏸️ PAUSE", ImVec2(90, 40))) {}
+        ImGui::PopStyleColor(2);
+        
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.20f, 0.20f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.25f, 0.25f, 1.0f));
+        if(ImGui::Button("⏹️ STOP", ImVec2(90, 40))) {}
+        ImGui::PopStyleColor(2);
+        ImGui::PopStyleVar();
+        
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    // Floating Stats Panel - Modern glass effect
+    ImGui::SetNextWindowPos(ImVec2(20, 90));
+    ImGui::SetNextWindowBgAlpha(0.85f);
+    
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.10f, 0.12f, 0.9f));
+    ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+    
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "⚡ PERFORMANCE");
+    ImGui::Separator();
+    ImGui::Dummy(ImVec2(0, 3));
+    
+    float fps = 1.0f / deltaTime;
+    ImVec4 fpsColor = fps > 60 ? ImVec4(0.3f, 1.0f, 0.3f, 1.0f) : 
+                      fps > 30 ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) : 
+                                 ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
+    
+    ImGui::Text("FPS:");
+    ImGui::SameLine(100);
+    ImGui::TextColored(fpsColor, "%.0f", fps);
+    
+    ImGui::Text("Frame Time:");
+    ImGui::SameLine(100);
+    ImGui::Text("%.2f ms", deltaTime * 1000);
+    
+    ImGui::Dummy(ImVec2(0, 5));
+    ImGui::TextDisabled(showCursor ? "🖱️ UI Mode" : "🎮 Game Mode");
+    
+    ImGui::End();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+
+    // Inspector Panel - Only show in UI mode
+    if (showCursor) {
+        float panelWidth = 350.0f;
+        ImGui::SetNextWindowPos(ImVec2(viewport->Size.x - panelWidth, 90));
+        ImGui::SetNextWindowSize(ImVec2(panelWidth, viewport->Size.y - 90));
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.10f, 0.98f));
+        
+        ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+            
+            ImGui::SetWindowFontScale(1.2f);
+            ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "🔍 INSPECTOR");
+            ImGui::SetWindowFontScale(1.0f);
+            
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 10));
+            
+            // Object header
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
+            ImGui::BeginChild("ObjectHeader", ImVec2(0, 60), true);
+            ImGui::Dummy(ImVec2(0, 5));
+            static char objName[64] = "Viking Room Model";
+            ImGui::Text("Name:");
+            ImGui::PushItemWidth(-1);
+            ImGui::InputText("##ObjName", objName, 64);
+            ImGui::PopItemWidth();
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            
+            ImGui::Dummy(ImVec2(0, 10));
+            
+            // Transform Component
+            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
+            if (ImGui::CollapsingHeader("📐 Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent(10);
+                
+                static float pos[3] = {0,0,0};
+                static float rot[3] = {0,0,0};
+                static float scl[3] = {1,1,1};
+                
+                ImGui::Text("Position");
+                ImGui::DragFloat3("##pos", pos, 0.1f, -100.0f, 100.0f, "%.2f");
+                ImGui::Dummy(ImVec2(0, 5));
+                
+                ImGui::Text("Rotation");
+                ImGui::DragFloat3("##rot", rot, 1.0f, -180.0f, 180.0f, "%.1f°");
+                ImGui::Dummy(ImVec2(0, 5));
+                
+                ImGui::Text("Scale");
+                ImGui::DragFloat3("##scl", scl, 0.05f, 0.01f, 10.0f, "%.2f");
+                
+                ImGui::Unindent(10);
+            }
+            
+            ImGui::Dummy(ImVec2(0, 5));
+            
+            // Mesh Renderer Component
+            if (ImGui::CollapsingHeader("🎨 Mesh Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent(10);
+                
+                ImGui::Text("Material:");
+                ImGui::SameLine();
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.75f, 1.0f), "Standard");
+                
+                ImGui::Dummy(ImVec2(0, 10));
+                
+                static ImVec4 albedo = ImVec4(1,1,1,1);
+                ImGui::Text("Albedo Color");
+                ImGui::ColorEdit3("##albedo", (float*)&albedo);
+                
+                ImGui::Dummy(ImVec2(0, 10));
+                
+                static float metallic = 0.0f;
+                static float roughness = 0.5f;
+                
+                ImGui::Text("Metallic");
+                ImGui::SliderFloat("##metallic", &metallic, 0.0f, 1.0f);
+                
+                ImGui::Text("Roughness");
+                ImGui::SliderFloat("##roughness", &roughness, 0.0f, 1.0f);
+                
+                ImGui::Unindent(10);
+            }
+            
+            ImGui::PopStyleColor();
+            
+            ImGui::Dummy(ImVec2(0, 20));
+            
+            // Add Component Button
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+            if (ImGui::Button("➕ Add Component", ImVec2(-1, 40))) {
+                ImGui::OpenPopup("AddComponent");
+            }
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+            
+            if (ImGui::BeginPopup("AddComponent")) {
+                ImGui::Text("Components");
+                ImGui::Separator();
+                if (ImGui::Selectable("🔊 Audio Source")) {}
+                if (ImGui::Selectable("💡 Light")) {}
+                if (ImGui::Selectable("📷 Camera")) {}
+                if (ImGui::Selectable("⚙️ Rigidbody")) {}
+                ImGui::EndPopup();
+            }
+            
+        ImGui::End();
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+    }
+}

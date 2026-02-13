@@ -1,0 +1,14 @@
+D:\MyProject\COGENT_ENGINE\main.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\main.obj
+D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\GBuffer.obj
+D:\MyProject\COGENT_ENGINE\Renderer\RenderPipeline.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\RenderPipeline.obj
+D:\MyProject\COGENT_ENGINE\Renderer\LightingPass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\LightingPass.obj
+D:\MyProject\COGENT_ENGINE\Resources\Model.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Model.obj
+D:\MyProject\COGENT_ENGINE\Resources\Texture.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Texture.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_draw.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_draw.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_demo.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_demo.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_glfw.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_impl_glfw.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_vulkan.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_impl_vulkan.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_tables.obj
+D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_widgets.obj
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\EditorUI.obj

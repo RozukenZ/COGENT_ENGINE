@@ -1,0 +1,10 @@
+^D:\MYPROJECT\COGENT_ENGINE\CMAKELISTS.TXT
+setlocal
+D:\CMake\bin\cmake.exe -SD:/MyProject/COGENT_ENGINE -BD:/MyProject/COGENT_ENGINE/build --check-stamp-file D:/MyProject/COGENT_ENGINE/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
