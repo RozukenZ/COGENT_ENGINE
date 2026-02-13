@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Renderer\RenderPipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Renderer\LightingPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_demo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_vulkan.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Renderer\RenderPipeline.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Renderer\LightingPass.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Types.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\VulkanUtils.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\MyProject\COGENT_ENGINE\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{1064B826-2BBC-3631-9912-0FB6F31ABE2F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4A64207F-6E06-3805-A698-09BAFB0DB1D3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
