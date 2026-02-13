@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include "Types.hpp"
+#include "Camera.hpp"
 
 enum class AppState {
     LOADING,
@@ -21,15 +23,17 @@ public:
               VkDevice device, uint32_t queueFamily, VkQueue queue, 
               VkRenderPass renderPass, uint32_t minImageCount);
 
-    void Update(AppState& currentState, bool& showCursor, float& deltaTime);
+    void Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject);
     void Draw(VkCommandBuffer commandBuffer);
     void Cleanup(VkDevice device);
+    
 
 private:
     void ApplyModernDarkTheme();
     void RenderLoadingScreen(AppState& currentState);
     void RenderProjectHub(AppState& currentState, bool& showCursor);
-    void RenderEditorWorkspace(bool showCursor, float deltaTime);
+    void RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject);
+    void RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex);
     void RenderFolderBrowserModal(); 
 
     VkDescriptorPool imguiPool;

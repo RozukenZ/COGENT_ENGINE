@@ -35,6 +35,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_tables.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_widgets.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Editor/EditorUI.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo/ImGuizmo.cpp
 )
 
 # 3. Create Executable
@@ -51,7 +52,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Renderer"
     "${CMAKE_CURRENT_SOURCE_DIR}/Resources"
     "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo"
     "${CMAKE_CURRENT_SOURCE_DIR}/Editor"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Scene"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Geometry"
 )
 
 # 5. LINK LIBRARIES

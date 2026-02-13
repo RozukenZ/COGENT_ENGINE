@@ -2,6 +2,10 @@
 #include <array>
 #include <iostream>
 #include <cmath>
+#include "ImGuizmo.h"
+#include <glm/gtc/type_ptr.hpp>
+#include "Types.hpp"
+#include "Camera.hpp"
 
 namespace fs = std::filesystem;
 
@@ -63,25 +67,30 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime) {
+// [FIX] Parameter fungsi ditambahkan: camera & selectedObject
+void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject) {
+    
+    // 1. Setup Frame ImGui
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    // 2. Setup Fullscreen Window Docking (Opsional tapi bagus untuk Editor)
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(viewport->Size);
     
+    // 3. State Machine Logic
     if (currentState == AppState::LOADING) {
         RenderLoadingScreen(currentState);
     } 
     else if (currentState == AppState::PROJECT_MENU) {
         RenderProjectHub(currentState, showCursor);
         
-        // [FIX UTAMA] Logic Popup dipindah ke sini agar level-nya paling atas
+        // [FIX UTAMA] Logic Popup tetap dipertahankan disini
         if (openFolderPopup) {
-            ImGui::OpenPopup("Select Folder"); // Panggil sekali saja saat trigger aktif
-            openFolderPopup = false;           // Matikan trigger
+            ImGui::OpenPopup("Select Folder"); 
+            openFolderPopup = false;           
             showFolderBrowser = true;
         }
 
@@ -90,9 +99,12 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
         }
     } 
     else if (currentState == AppState::EDITOR) {
-        RenderEditorWorkspace(showCursor, deltaTime);
+        // [FIX] Passing data Camera & Object ke Workspace
+        // Agar Gizmo dan Inspector bisa bekerja!
+        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject);
     }
 
+    // 4. Render Draw Data
     ImGui::Render();
 }
 
@@ -278,7 +290,7 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
     // Logo
     ImGui::SetCursorPosX(40);
     ImGui::SetWindowFontScale(1.5f);
-    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "⚡ COGENT");
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "COGENT");
     ImGui::SetWindowFontScale(1.0f);
     ImGui::SetCursorPosX(40);
     ImGui::TextDisabled("Game Engine Hub");
@@ -359,7 +371,7 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
         
         ImGui::BeginChild("Card1", ImVec2(ImGui::GetContentRegionAvail().x, 100), true, ImGuiWindowFlags_NoScrollbar);
-        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("🎮 FPS Shooter Demo"); ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("FPS Shooter Demo"); ImGui::SetWindowFontScale(1.0f);
         ImGui::SetCursorPos(ImVec2(20, 50)); ImGui::TextDisabled("D:/Dev/FPS_Demo");
         ImGui::SetCursorPos(ImVec2(20, 70)); ImGui::TextDisabled("Last modified: 2 hours ago");
         
@@ -428,7 +440,7 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
     if (ImGui::BeginPopupModal("Create New Project", NULL, ImGuiWindowFlags_NoResize)) {
         
         ImGui::SetWindowFontScale(1.5f);
-        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "✨ Create New Project");
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "Create New Project");
         ImGui::SetWindowFontScale(1.0f);
         
         ImGui::Dummy(ImVec2(0, 10));
@@ -519,7 +531,7 @@ void EditorUI::RenderFolderBrowserModal() {
         
         // --- HEADER ---
         ImGui::SetWindowFontScale(1.3f);
-        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "📂 Select Project Location");
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "Select Project Location");
         ImGui::SetWindowFontScale(1.0f);
         
         ImGui::Dummy(ImVec2(0, 5));
@@ -618,7 +630,7 @@ void EditorUI::RenderFolderBrowserModal() {
                         if (dirName.empty() || dirName[0] == '$' || dirName[0] == '.') continue;
 
                         anyFolders = true;
-                        std::string label = "📁  " + dirName;
+                        std::string label =  dirName;
                         
                         // Style item list
                         ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
@@ -646,14 +658,14 @@ void EditorUI::RenderFolderBrowserModal() {
             } else {
                 ImGui::Dummy(ImVec2(0, 50));
                 ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 80);
-                ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "⚠️ Invalid directory path");
+                ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Invalid directory path");
             }
         } 
         catch (...) {
             // Catch-all block agar aplikasi TIDAK CRASH saat akses folder bermasalah
             ImGui::Dummy(ImVec2(0, 50));
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
-            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "❌ Access Denied");
+            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Access Denied");
         }
         
         ImGui::EndChild();
@@ -702,41 +714,39 @@ void EditorUI::RenderFolderBrowserModal() {
 //                          MODERN EDITOR WORKSPACE
 // ==================================================================================
 
-void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
+   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject) {
     
-    // Top Menu Bar - Sleek and minimal
+    // 1. Top Menu Bar
     if (ImGui::BeginMainMenuBar()) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
-        ImGui::Text("⚡");
-        ImGui::PopStyleColor();
         ImGui::Text("COGENT ENGINE");
+        ImGui::PopStyleColor();
         
         ImGui::Separator();
         
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("💾 Save", "Ctrl+S")) {}
-            if (ImGui::MenuItem("📂 Open Scene", "Ctrl+O")) {}
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {}
+            if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {}
             ImGui::Separator();
-            if (ImGui::MenuItem("❌ Exit", "Alt+F4")) exit(0);
+            if (ImGui::MenuItem("Exit", "Alt+F4")) exit(0);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("↩️ Undo", "Ctrl+Z")) {}
-            if (ImGui::MenuItem("↪️ Redo", "Ctrl+Y")) {}
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
+            if (ImGui::MenuItem("Redo", "Ctrl+Y")) {}
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Window")) {
-            if (ImGui::MenuItem("📊 Performance")) {}
-            if (ImGui::MenuItem("🔧 Tools")) {}
+            if (ImGui::MenuItem("Performance")) {}
+            if (ImGui::MenuItem("Tools")) {}
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("📖 Documentation")) {}
-            if (ImGui::MenuItem("ℹ️ About")) {}
+            if (ImGui::MenuItem("Documentation")) {}
+            if (ImGui::MenuItem("About")) {}
             ImGui::EndMenu();
         }
         
-        // Right-aligned info
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 200);
         ImGui::TextDisabled("FPS: %.0f", 1.0f / deltaTime);
         
@@ -745,7 +755,7 @@ void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     
-    // Modern Toolbar with rounded buttons
+    // 2. Toolbar
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20));
     ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, 60));
     
@@ -759,60 +769,70 @@ void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
         ImGui::SameLine(viewport->Size.x / 2 - 150); 
         
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        
+        // Play Button
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.60f, 0.30f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.70f, 0.35f, 1.0f));
-        if(ImGui::Button("▶️ PLAY", ImVec2(90, 40))) {}
+        if(ImGui::Button("PLAY", ImVec2(90, 40))) {}
         ImGui::PopStyleColor(2);
         
         ImGui::SameLine();
+        
+        // Pause Button
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.50f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.60f, 0.25f, 1.0f));
-        if(ImGui::Button("⏸️ PAUSE", ImVec2(90, 40))) {}
+        if(ImGui::Button("PAUSE", ImVec2(90, 40))) {}
         ImGui::PopStyleColor(2);
         
         ImGui::SameLine();
+        
+        // Stop Button
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.20f, 0.20f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.25f, 0.25f, 1.0f));
-        if(ImGui::Button("⏹️ STOP", ImVec2(90, 40))) {}
+        if(ImGui::Button("STOP", ImVec2(90, 40))) {}
         ImGui::PopStyleColor(2);
+        
         ImGui::PopStyleVar();
         
     ImGui::End();
     ImGui::PopStyleColor();
 
-    // Floating Stats Panel - Modern glass effect
-    ImGui::SetNextWindowPos(ImVec2(20, 90));
-    ImGui::SetNextWindowBgAlpha(0.85f);
-    
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.10f, 0.10f, 0.12f, 0.9f));
-    ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
-    
-    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "⚡ PERFORMANCE");
-    ImGui::Separator();
-    ImGui::Dummy(ImVec2(0, 3));
-    
-    float fps = 1.0f / deltaTime;
-    ImVec4 fpsColor = fps > 60 ? ImVec4(0.3f, 1.0f, 0.3f, 1.0f) : 
-                      fps > 30 ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) : 
-                                 ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
-    
-    ImGui::Text("FPS:");
-    ImGui::SameLine(100);
-    ImGui::TextColored(fpsColor, "%.0f", fps);
-    
-    ImGui::Text("Frame Time:");
-    ImGui::SameLine(100);
-    ImGui::Text("%.2f ms", deltaTime * 1000);
-    
-    ImGui::Dummy(ImVec2(0, 5));
-    ImGui::TextDisabled(showCursor ? "🖱️ UI Mode" : "🎮 Game Mode");
-    
-    ImGui::End();
-    ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
+    // 3. ImGuizmo Setup (Transform Gizmo)
+    // Setup for Gizmo Logic
+    static ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
+    static ImGuizmo::MODE currentGizmoMode = ImGuizmo::WORLD;
 
-    // Inspector Panel - Only show in UI mode
+    if (showCursor) {
+        ImGuizmo::BeginFrame();
+        ImGuizmo::Enable(true);
+
+        ImGuiIO& io = ImGui::GetIO();
+        ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+
+        // Calculate Camera Matrices for Gizmo
+        glm::mat4 viewMatrix = camera.getViewMatrix();
+        float aspectRatio = io.DisplaySize.x / io.DisplaySize.y;
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
+        projectionMatrix[1][1] *= -1; 
+
+        // Draw Gizmo
+        ImGuizmo::Manipulate(
+            glm::value_ptr(viewMatrix),
+            glm::value_ptr(projectionMatrix),
+            currentGizmoOperation,
+            currentGizmoMode,
+            glm::value_ptr(selectedObject.model)
+        );
+        
+        // Keyboard Shortcuts (W, E, R)
+        if (!ImGui::GetIO().WantCaptureKeyboard) {
+            if (ImGui::IsKeyPressed(ImGuiKey_W)) currentGizmoOperation = ImGuizmo::TRANSLATE;
+            if (ImGui::IsKeyPressed(ImGuiKey_E)) currentGizmoOperation = ImGuizmo::ROTATE;
+            if (ImGui::IsKeyPressed(ImGuiKey_R)) currentGizmoOperation = ImGuizmo::SCALE;
+        }
+    }
+
+    // 4. Inspector Panel
     if (showCursor) {
         float panelWidth = 350.0f;
         ImGui::SetNextWindowPos(ImVec2(viewport->Size.x - panelWidth, 90));
@@ -824,87 +844,67 @@ void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
         ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
             
             ImGui::SetWindowFontScale(1.2f);
-            ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "🔍 INSPECTOR");
+            ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "INSPECTOR");
             ImGui::SetWindowFontScale(1.0f);
-            
             ImGui::Separator();
             ImGui::Dummy(ImVec2(0, 10));
             
-            // Object header
-            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
-            ImGui::BeginChild("ObjectHeader", ImVec2(0, 60), true);
-            ImGui::Dummy(ImVec2(0, 5));
-            static char objName[64] = "Viking Room Model";
-            ImGui::Text("Name:");
-            ImGui::PushItemWidth(-1);
-            ImGui::InputText("##ObjName", objName, 64);
-            ImGui::PopItemWidth();
-            ImGui::EndChild();
-            ImGui::PopStyleColor();
-            
-            ImGui::Dummy(ImVec2(0, 10));
-            
-            // Transform Component
+            // Transform Section
             ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
-            if (ImGui::CollapsingHeader("📐 Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
                 ImGui::Indent(10);
                 
-                static float pos[3] = {0,0,0};
-                static float rot[3] = {0,0,0};
-                static float scl[3] = {1,1,1};
+                // Gizmo Operation Selection
+                ImGui::Text("Operation:");
+                if (ImGui::RadioButton("Translate", currentGizmoOperation == ImGuizmo::TRANSLATE)) currentGizmoOperation = ImGuizmo::TRANSLATE; ImGui::SameLine();
+                if (ImGui::RadioButton("Rotate", currentGizmoOperation == ImGuizmo::ROTATE)) currentGizmoOperation = ImGuizmo::ROTATE; ImGui::SameLine();
+                if (ImGui::RadioButton("Scale", currentGizmoOperation == ImGuizmo::SCALE)) currentGizmoOperation = ImGuizmo::SCALE;
+                ImGui::Dummy(ImVec2(0, 10));
+
+                // Decompose matrix to display values in DragFloat
+                float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(selectedObject.model), matrixTranslation, matrixRotation, matrixScale);
                 
+                bool valuesChanged = false;
                 ImGui::Text("Position");
-                ImGui::DragFloat3("##pos", pos, 0.1f, -100.0f, 100.0f, "%.2f");
-                ImGui::Dummy(ImVec2(0, 5));
+                if (ImGui::DragFloat3("##pos", matrixTranslation, 0.1f)) valuesChanged = true;
                 
                 ImGui::Text("Rotation");
-                ImGui::DragFloat3("##rot", rot, 1.0f, -180.0f, 180.0f, "%.1f°");
-                ImGui::Dummy(ImVec2(0, 5));
+                if (ImGui::DragFloat3("##rot", matrixRotation, 0.1f)) valuesChanged = true;
                 
                 ImGui::Text("Scale");
-                ImGui::DragFloat3("##scl", scl, 0.05f, 0.01f, 10.0f, "%.2f");
+                if (ImGui::DragFloat3("##scl", matrixScale, 0.1f)) valuesChanged = true;
                 
+                // Recompose matrix if values changed via UI
+                if (valuesChanged) {
+                    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(selectedObject.model));
+                }
+
                 ImGui::Unindent(10);
             }
-            
-            ImGui::Dummy(ImVec2(0, 5));
-            
-            // Mesh Renderer Component
-            if (ImGui::CollapsingHeader("🎨 Mesh Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Indent(10);
-                
-                ImGui::Text("Material:");
-                ImGui::SameLine();
-                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.75f, 1.0f), "Standard");
-                
-                ImGui::Dummy(ImVec2(0, 10));
-                
-                static ImVec4 albedo = ImVec4(1,1,1,1);
-                ImGui::Text("Albedo Color");
-                ImGui::ColorEdit3("##albedo", (float*)&albedo);
-                
-                ImGui::Dummy(ImVec2(0, 10));
-                
-                static float metallic = 0.0f;
-                static float roughness = 0.5f;
-                
-                ImGui::Text("Metallic");
-                ImGui::SliderFloat("##metallic", &metallic, 0.0f, 1.0f);
-                
-                ImGui::Text("Roughness");
-                ImGui::SliderFloat("##roughness", &roughness, 0.0f, 1.0f);
-                
-                ImGui::Unindent(10);
-            }
-            
             ImGui::PopStyleColor();
             
             ImGui::Dummy(ImVec2(0, 20));
+
+            // Material Section (Color Wheel)
+            if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent(10);
+                ImGui::Text("Albedo Color");
+                
+                // Color Picker connecting directly to ObjectPushConstant color
+                ImGui::ColorPicker4("##picker", glm::value_ptr(selectedObject.color), ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
+                
+                ImGui::Dummy(ImVec2(0, 10));
+                
+                ImGui::Unindent(10);
+            }
             
-            // Add Component Button
+            ImGui::Dummy(ImVec2(0, 20));
+            
+            // Add Component
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
-            if (ImGui::Button("➕ Add Component", ImVec2(-1, 40))) {
+            if (ImGui::Button("Add Component", ImVec2(-1, 40))) {
                 ImGui::OpenPopup("AddComponent");
             }
             ImGui::PopStyleVar();
@@ -913,10 +913,9 @@ void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
             if (ImGui::BeginPopup("AddComponent")) {
                 ImGui::Text("Components");
                 ImGui::Separator();
-                if (ImGui::Selectable("🔊 Audio Source")) {}
-                if (ImGui::Selectable("💡 Light")) {}
-                if (ImGui::Selectable("📷 Camera")) {}
-                if (ImGui::Selectable("⚙️ Rigidbody")) {}
+                if (ImGui::Selectable("Sphere Mesh")) {}
+                if (ImGui::Selectable("Cube Mesh")) {}
+                if (ImGui::Selectable("Physics Body")) {}
                 ImGui::EndPopup();
             }
             
@@ -924,4 +923,39 @@ void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime) {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
     }
+}
+
+// Tambahkan parameter list object dan index yang dipilih
+void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex) {
+    
+    // Panel di Kiri (Hierarchy)
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20 + 60)); // Di bawah Toolbar
+    ImGui::SetNextWindowSize(ImVec2(300, viewport->Size.y - 80)); // Lebar 300px
+    
+    ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoCollapse);
+
+    // Loop semua object
+    for (int i = 0; i < objects.size(); i++) {
+        // Setup Flag agar bisa di-klik (Selected)
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if (selectedIndex == i) {
+            flags |= ImGuiTreeNodeFlags_Selected;
+        }
+
+        // Tampilkan Nama Object
+        ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "%s", objects[i].name.c_str());
+
+        // Logic Klik
+        if (ImGui::IsItemClicked()) {
+            selectedIndex = i;
+        }
+    }
+
+    // Klik area kosong untuk unselect
+    if (ImGui::IsMouseDown(0) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
+        selectedIndex = -1;
+    }
+
+    ImGui::End();
 }

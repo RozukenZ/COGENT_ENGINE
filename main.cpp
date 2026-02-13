@@ -81,6 +81,8 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     mainCamera.processMouseMovement(xoffset, yoffset);
 }
 
+ObjectPushConstant selectedObject{};
+
 class CogentEngine {
 public:
     void run() {
@@ -300,7 +302,7 @@ private:
             // Dont forget to pass currentState by reference!
             // so that EditorUI can modify it when needed
             // Example: currentState = AppState::EDITOR;
-            editorUI.Update(currentState, showCursor, deltaTime);
+            editorUI.Update(currentState, showCursor, deltaTime, mainCamera, selectedObject);
 
             // 4. Update Uniform Buffer
             if (currentState == AppState::EDITOR) {
@@ -456,7 +458,8 @@ private:
         lightRenderPassInfo.renderArea.offset = {0, 0};
         lightRenderPassInfo.renderArea.extent = swapchainExtent;
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+        VkClearValue clearColor = {};
+        clearColor.color = {{0.2f, 0.3f, 0.4f, 1.0f}};;
         lightRenderPassInfo.clearValueCount = 1;
         lightRenderPassInfo.pClearValues = &clearColor;
 

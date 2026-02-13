@@ -86,7 +86,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "D:/SDK/Vulkan/include"</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -115,10 +115,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -145,7 +145,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "D:/SDK/Vulkan/include"</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -175,10 +175,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -205,7 +205,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "D:/SDK/Vulkan/include"</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -235,10 +235,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -265,7 +265,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /external:I "D:/SDK/Vulkan/include"</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -294,10 +294,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Editor;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\SDK\GLFW\glfw-3.4.bin.WIN64\include;D:\SDK\tinyobjloader;D:\SDK\GLM;D:\MyProject\COGENT_ENGINE\Core;D:\MyProject\COGENT_ENGINE\Renderer;D:\MyProject\COGENT_ENGINE\Resources;D:\MyProject\COGENT_ENGINE\Vendor\imgui;D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo;D:\MyProject\COGENT_ENGINE\Editor;D:\MyProject\COGENT_ENGINE\Scene;D:\MyProject\COGENT_ENGINE\Geometry;D:\SDK\Vulkan\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -399,6 +399,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp" />
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

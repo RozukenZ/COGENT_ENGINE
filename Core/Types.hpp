@@ -30,5 +30,20 @@ struct CameraUBO {
 
 // Struktur Data Per-Objek (Model Transform)
 struct ObjectPushConstant {
-    glm::mat4 model; // Posisi, Rotasi, Scale objek di dunia 3D
+    glm::mat4 model;
+    alignas(16) glm::vec4 color; // Default color (RGBA) -> Color Wheel control
+};
+
+// New UBO for Global Lighting (Sun)
+struct GlobalLightUBO {
+    alignas(16) glm::vec3 direction; // Lightnbe direction
+    alignas(16) glm::vec3 color;     // Light color
+    float intensity;                 // Light intensity
+};
+
+struct GameObject {
+    std::string name;       // Name of the object (for editor)
+    glm::mat4 model;        // Transform model (position, rotation, scale)
+    glm::vec4 color;        // Colour for editor visualization
+    int id;                 // ID Unique for picking
 };

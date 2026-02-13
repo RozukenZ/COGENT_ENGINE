@@ -215,9 +215,6 @@ Vulkan_INCLUDE_DIR:PATH=D:/SDK/Vulkan/include
 //Path to a library.
 Vulkan_LIBRARY:FILEPATH=D:/SDK/Vulkan/Lib/vulkan-1.lib
 
-//The directory containing a CMake configuration file for glm.
-glm_DIR:PATH=glm_DIR-NOTFOUND
-
 
 ########################
 # INTERNAL cache entries
