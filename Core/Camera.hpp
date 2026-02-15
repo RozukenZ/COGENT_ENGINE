@@ -36,6 +36,12 @@ public:
         return glm::lookAt(position, position + front, up);
     }
 
+    glm::mat4 getProjectionMatrix(float aspectRatio = 1.777f) {
+        glm::mat4 proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+        proj[1][1] *= -1;
+        return proj;
+    }
+
     void processKeyboard(GLFWwindow* window, float deltaTime) {
         float velocity = movementSpeed * deltaTime;
         

@@ -17,15 +17,17 @@
 #include "imgui_impl_vulkan.h"
 
 // Include modul buatan kita
+#include "RayTracing/RayTracer.hpp"
 #include "GBuffer.hpp"
 #include "Model.hpp"
 #include "RenderPipeline.hpp"
-#include "Types.hpp"
-#include "VulkanUtils.hpp"
+#include "Core/Types.hpp"
+#include "Core/VulkanUtils.hpp"
 #include "LightingPass.hpp"
 #include "Resources/Texture.hpp"
 #include "Core/Camera.hpp"
 #include "Editor/EditorUI.hpp"
+#include "Geometry/PrimitiveMesh.hpp"
 
 
 const uint32_t WIDTH = 1920;
@@ -81,7 +83,36 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     mainCamera.processMouseMovement(xoffset, yoffset);
 }
 
+//Global Storage untuk Mesh & Object
+std::vector<Model> meshes; 
+std::vector<GameObject> gameObjects; 
+int selectedObjectIndex = -1;
 ObjectPushConstant selectedObject{};
+
+void spawnObject(int meshID, glm::vec3 position) {
+    GameObject obj;
+    obj.id = (int)gameObjects.size(); // ID unik (0, 1, 2, 3...)
+    
+    // Simpan Tipe Mesh (0=Cube, 1=Sphere, 2=Capsule)
+    // [PENTING] Ini harus disimpan di variabel khusus, bukan di obj.id!
+    obj.meshID = meshID; 
+
+    // Setup Nama & Warna
+    if (meshID == 0) obj.name = "Cube " + std::to_string(obj.id);
+    else if (meshID == 1) obj.name = "Sphere " + std::to_string(obj.id);
+    else if (meshID == 2) obj.name = "Capsule " + std::to_string(obj.id);
+    else obj.name = "Object " + std::to_string(obj.id);
+    
+    obj.model = glm::translate(glm::mat4(1.0f), position);
+    obj.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // Putih
+
+    gameObjects.push_back(obj);
+    selectedObjectIndex = obj.id;
+    
+    std::cout << "Spawned: " << obj.name << " (Mesh ID: " << obj.meshID << ")" << std::endl;
+}
+
+
 
 class CogentEngine {
 public:
@@ -145,6 +176,7 @@ private:
     GBuffer gBuffer;
     Model myModel;
     RenderPipeline gBufferPipeline;
+    RayTracer rayTracer; // [NEW] Ray Tracer Instance
 
     // --- LIGHTING SYSTEM ---
     LightingPass lightingPass;
@@ -171,7 +203,8 @@ private:
     VkQueue presentQueue;
 
     // TEXTURE RESOURCE
-    Texture myTexture; 
+    Texture myTexture;
+    Texture whiteTexture;
     VkDescriptorSetLayout textureDescriptorLayout;
     VkDescriptorPool textureDescriptorPool;
     VkDescriptorSet textureDescriptorSet;
@@ -213,14 +246,15 @@ private:
         createDescriptorPool(); // Pool untuk Camera
         createDescriptorSets(); // Set untuk Camera
         
-        // --- 2. LOAD TEXTURE (WAJIB DULUAN!) ---
-        // Kita harus load gambar dulu biar ImageView-nya terbentuk
-        std::cout << "Loading Texture..." << std::endl;
-        // Pastikan file gambar ada di build/Debug/textures/viking_room.png
-        myTexture.load(device, physicalDevice, commandPool, graphicsQueue, "textures/viking_room.png"); 
+        // --- 2. LOAD DEFAULT TEXTURE (WHITE) ---
+        // Kita ganti texture spesifik model dengan texture putih polos 1x1 pixel.
+        // Ini penting agar kita bisa mengubah warna objek sesuka hati lewat Editor UI (Color Wheel).
+        // Pastikan kamu punya file "textures/white.png" di folder build!
+        std::cout << "Loading Default White Texture..." << std::endl;
+        whiteTexture.load(device, physicalDevice, commandPool, graphicsQueue, "textures/white.png"); 
         
         // --- 3. TEXTURE DESCRIPTORS (SET 1) ---
-        // Sekarang aman dipanggil karena myTexture sudah punya ImageView
+        // Setup descriptor agar Shader bisa membaca texture putih tersebut
         createTextureDescriptors();
 
         // --- 4. INIT GRAPHICS PIPELINE ---
@@ -230,14 +264,27 @@ private:
         
         gBufferPipeline.init(device, gBuffer.getRenderPass(), {WIDTH, HEIGHT}, layouts);
         
-        // --- 5. LOAD MODEL ---
-        myModel.loadModel(device, physicalDevice, "models/viking_room.obj");
+        // --- 5. GENERATE PRIMITIVE MESHES (Cube, Sphere, Capsule) ---
+        std::cout << "Generating Primitive Meshes..." << std::endl;
+        
+        meshes.resize(3); // Siapkan slot untuk 3 jenis mesh dasar
+        PrimitiveMesh generator; // Panggil class generator yang sudah kita buat
+
+        // A. Generate CUBE (ID 0)
+        generator.createCube();
+        meshes[0].loadFromMesh(device, physicalDevice, generator.vertices, generator.indices);
+
+        // B. Generate SPHERE (ID 1)
+        generator.createSphere(1.0f, 32, 32); // Radius 1.0, Detail tinggi
+        meshes[1].loadFromMesh(device, physicalDevice, generator.vertices, generator.indices);
+
+        // C. Generate CAPSULE (ID 2)
+        generator.createCapsule(0.5f, 2.0f, 32, 16); // Radius 0.5, Tinggi 2.0
+        meshes[2].loadFromMesh(device, physicalDevice, generator.vertices, generator.indices);
 
         // --- 6. LIGHTING PASS RESOURCES ---
-        // Sampler ini dipakai untuk G-Buffer Reading (Lighting Pass)
         createTextureSampler(); 
-        
-        createLightingDescriptors(); // Butuh Texture Sampler di atas
+        createLightingDescriptors(); 
         createLightingRenderPass(); 
         createSwapchainFramebuffers(); 
         
@@ -248,9 +295,18 @@ private:
         // --- 7. INIT ImGui untuk Editor UI ---
         std::cout << "Initializing ImGui Editor UI..." << std::endl;
         editorUI.Init(window, instance, physicalDevice, device, 
-                      findQueueFamilies(physicalDevice).graphicsFamily.value(), 
-                      graphicsQueue, lightingRenderPass, 2);
+                    findQueueFamilies(physicalDevice).graphicsFamily.value(), 
+                    graphicsQueue, lightingRenderPass, 2);
 
+        // --- 8. INIT RAY TRACER ---
+        std::cout << "Initializing Ray Tracer..." << std::endl;
+        rayTracer.init(device, physicalDevice, commandPool, graphicsQueue, swapchainExtent); // Reuse Graphics Queue for simplicity
+
+        // --- 9. SPAWN INITIAL OBJECTS ---
+        // Spawn objek awal agar scene tidak kosong saat dijalankan
+        std::cout << "Spawning Initial Objects..." << std::endl;
+        spawnObject(0, glm::vec3(0.0f, 0.0f, 0.0f));  // Cube di Tengah
+        spawnObject(1, glm::vec3(2.5f, 0.0f, 0.0f));  // Sphere di Kanan
     }
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -296,13 +352,42 @@ private:
                 }
             }
 
-            // 3. Update UI Logic
+            //SPAWN OBJECT CONTEXT MENU
+            if (showCursor && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered()) {
+                ImGui::OpenPopup("SpawnContext");
+            }
+
+            if (ImGui::BeginPopup("SpawnContext")) {
+                ImGui::Text("Add Object");
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Cube"))    spawnObject(0, glm::vec3(0, 0, 0));
+                if (ImGui::MenuItem("Sphere"))  spawnObject(1, glm::vec3(0, 0, 0));
+                if (ImGui::MenuItem("Capsule")) spawnObject(2, glm::vec3(0, 0, 0));
+                
+                ImGui::EndPopup();
+            }
+
+            // Update UI Logic
             // This is important! For ImGui to work properly
             // Remember: ImGui Render ada di dalam recordCommandBuffer
             // Dont forget to pass currentState by reference!
             // so that EditorUI can modify it when needed
             // Example: currentState = AppState::EDITOR;
-            editorUI.Update(currentState, showCursor, deltaTime, mainCamera, selectedObject);
+            // Update UI Logic
+            // This is important! For ImGui to work properly
+            // Remember: ImGui Render ada di dalam recordCommandBuffer
+            // Dont forget to pass currentState by reference!
+            // so that EditorUI can modify it when needed
+            // Example: currentState = AppState::EDITOR;
+            editorUI.Update(currentState, showCursor, deltaTime, mainCamera, selectedObject, gameObjects, selectedObjectIndex, rayTracer.getOutputDescriptorSet());
+
+            // Sync selectedObject if Changed in UI
+            if (currentState == AppState::EDITOR && selectedObjectIndex != -1) {
+                // Jika user ganti object via Hierarchy, kita update selectedObject
+                // (Optional: Bisa juga kita pake pointer langsung)
+                // selectedObject = gameObjects[selectedObjectIndex].getPushConstant(); 
+            }
 
             // 4. Update Uniform Buffer
             if (currentState == AppState::EDITOR) {
@@ -316,7 +401,7 @@ private:
     }
 
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-        // 1. Mulai Rekam Perintah
+        // 1. Start Recording Commands
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -326,7 +411,7 @@ private:
 
         // =========================================================
         // PASS 1: GEOMETRY PASS
-        // (Menggambar Model 3D + Texture ke G-Buffer)
+        // (Draw 3D Models + Textures into G-Buffer)
         // =========================================================
         
         VkRenderPassBeginInfo renderPassInfo{};
@@ -336,7 +421,7 @@ private:
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapchainExtent;
 
-        // Clear Screen (Hitamkan G-Buffer sebelum digambar)
+        // Clear Screen (Black out G-Buffer before drawing)
         std::array<VkClearValue, 4> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Albedo
         clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Normal
@@ -346,10 +431,13 @@ private:
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
 
-        // MULAI RENDER PASS 1
+        // [NEW] RAY TRACING DISPATCH
+        rayTracer.render(commandBuffer, VK_NULL_HANDLE, mainCamera, static_cast<float>(glfwGetTime()));
+
+        // START RENDER PASS 1
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-            // Setup Viewport (Area Gambar)
+            // Setup Viewport (Drawing Area)
             VkViewport viewport{};
             viewport.x = 0.0f;
             viewport.y = 0.0f;
@@ -364,7 +452,7 @@ private:
             scissor.extent = swapchainExtent;
             vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-            // Bind Pipeline G-Buffer (Shader Geometry)
+            // Bind Pipeline G-Buffer (Geometry Shader)
             vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline.getPipeline());
             
             // --- BIND DESCRIPTOR SETS ---
@@ -373,41 +461,47 @@ private:
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
                 gBufferPipeline.getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
 
-            // 2. [BARU] Bind Set 1: Texture (Material)
-            // Perhatikan parameter 'firstSet' adalah 1
+            // 2. [NEW] Bind Set 1: Texture (Material - White Texture)
+            // Note that 'firstSet' parameter is 1
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
                 gBufferPipeline.getPipelineLayout(), 1, 1, &textureDescriptorSet, 0, nullptr);
 
             // -----------------------------
 
-            // Hitung Rotasi Model (Animasi Putar)
-            static auto startTime = std::chrono::high_resolution_clock::now();
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+            // [UPDATED LOOP] Draw All Objects in Scene
+            for (const auto& obj : gameObjects) {
+                // Send Push Constants (Position & Color specific to this object)
+                ObjectPushConstant pc = obj.getPushConstant(); 
+                vkCmdPushConstants(
+                    commandBuffer, 
+                    gBufferPipeline.getPipelineLayout(), 
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
+                    0, 
+                    sizeof(ObjectPushConstant), 
+                    &pc
+                );
 
-            glm::mat4 modelMatrix = glm::mat4(1.0f);
-            modelMatrix = glm::rotate(modelMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-            modelMatrix = glm::rotate(modelMatrix, time * glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f)); 
-
-            vkCmdPushConstants(commandBuffer, gBufferPipeline.getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &modelMatrix);
-
-            // DRAW MODEL
-            myModel.draw(commandBuffer);
+                // Select Mesh based on Object ID
+                // Ensure ID is valid to prevent crashes
+                if (obj.id >= 0 && obj.id < meshes.size()) {
+                    meshes[obj.id].draw(commandBuffer);
+                }
+            }
 
         vkCmdEndRenderPass(commandBuffer);
 
 
         // =========================================================
         // TRANSITION BARRIER
-        // (Stop G-Buffer dari mode TULIS, ubah ke mode BACA untuk Shader Lighting)
+        // (Stop G-Buffer from WRITE mode, change to READ mode for Lighting Shader)
         // =========================================================
         
         std::array<VkImageMemoryBarrier, 2> barriers{};
 
         // 1. Albedo Image Transition
         barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barriers[0].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Bekas ditulis
-        barriers[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Siap dibaca shader
+        barriers[0].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Previously written to
+        barriers[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // Ready for shader reading
         barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barriers[0].image = gBuffer.getAlbedoImage(); 
@@ -434,7 +528,7 @@ private:
         barriers[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        // Eksekusi Barrier
+        // Execute Barrier
         vkCmdPipelineBarrier(
             commandBuffer,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
@@ -448,22 +542,23 @@ private:
 
         // =========================================================
         // PASS 2: LIGHTING PASS
-        // (Menggambar Fullscreen Quad ke Layar Monitor menggunakan data G-Buffer)
+        // (Draw Fullscreen Quad to Monitor Screen using G-Buffer data)
         // =========================================================
         
         VkRenderPassBeginInfo lightRenderPassInfo{};
         lightRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         lightRenderPassInfo.renderPass = lightingRenderPass;
-        lightRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex]; // Framebuffer Layar Asli
+        lightRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex]; // Real Screen Framebuffer
         lightRenderPassInfo.renderArea.offset = {0, 0};
         lightRenderPassInfo.renderArea.extent = swapchainExtent;
 
+        // [FIX] Bright Blue Sky Color (Daylight)
         VkClearValue clearColor = {};
-        clearColor.color = {{0.2f, 0.3f, 0.4f, 1.0f}};;
+        clearColor.color = {{0.53f, 0.81f, 0.92f, 1.0f}}; // Sky Blue
         lightRenderPassInfo.clearValueCount = 1;
         lightRenderPassInfo.pClearValues = &clearColor;
 
-        // MULAI RENDER PASS 2
+        // START RENDER PASS 2
         vkCmdBeginRenderPass(commandBuffer, &lightRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             // Viewport Fullscreen
@@ -485,23 +580,23 @@ private:
             vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
                 lightingPass.getPipelineLayout(), 0, 1, &lightingDescriptorSet, 0, nullptr);
 
-            // DRAW 3 VERTEX (Segitiga Ajaib Fullscreen)
+            // DRAW 3 VERTICES (Magic Fullscreen Triangle)
             vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
-            // [FIX TERBARU] Render ImGui di ATAS scene 3D via Class EditorUI
-            // Ini wajib ada, kalau tidak data UI yg sudah dibuat di renderUI() tidak akan tampil!
-            // Gantikan "ImGui_ImplVulkan_RenderDrawData" manual dengan:
+            // [LATEST FIX] Render ImGui ON TOP of 3D scene via EditorUI Class
+            // This is mandatory, otherwise UI created in renderUI() won't appear!
+            // Replace manual "ImGui_ImplVulkan_RenderDrawData" with:
             editorUI.Draw(commandBuffer);
 
-            vkCmdEndRenderPass(commandBuffer);
+        vkCmdEndRenderPass(commandBuffer);
 
 
-        // Selesai Rekam
+        // Stop Recording
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("Failed to stop recording command buffer!");
         }
     }
-
+    
     void cleanup() {
         std::cout << "Cleaning up resources..." << std::endl;
         //Make sure GPU on idle before cleaning up resources
@@ -533,6 +628,7 @@ private:
 
         // Cleaning G-Buffer
         gBuffer.cleanup(device);
+        rayTracer.cleanup(device);
 
         // Cleaning Model
         myModel.cleanup(device);
@@ -646,7 +742,7 @@ private:
         }
     }
 
-    // --- HELPER FUNCTIONS (Logika Detail) ---
+
 
     void updateCamera() {
         // Simulasi kalkulasi matriks view/proj (Logic GLM)
@@ -1390,8 +1486,8 @@ private:
         // NOTE: Image Layout MUST be VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL before this step.
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = myTexture.getImageView();
-        imageInfo.sampler = myTexture.getSampler();
+        imageInfo.imageView = whiteTexture.getImageView();
+        imageInfo.sampler = whiteTexture.getSampler();
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

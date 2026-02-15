@@ -1,67 +1,48 @@
 #pragma once
 #include <vulkan/vulkan.h>
-#include <glm/glm.hpp>
 #include <vector>
 #include <string>
-#include <array>
+#include "../Core/Types.hpp" // [FIX] Untuk struct Vertex
+#include "PrimitiveMesh.hpp" // [OPSIONAL] Jika loadFromMesh butuh PrimitiveMesh
 
-// Struktur Vertex yang sesuai dengan Shader G-Buffer nanti
-struct Vertex {
-    glm::vec3 pos;      // Posisi (X, Y, Z)
-    glm::vec3 normal;   // Arah hadap (untuk Lighting)
-    glm::vec2 texCoord; // Koordinat Texture (U, V)
-
-    // Memberitahu Vulkan cara membaca struct ini dari memori
-    static VkVertexInputBindingDescription getBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(Vertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        return bindingDescription;
-    }
-
-    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-        // Lokasi 0: Position
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-        // Lokasi 1: Normal
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, normal);
-
-        // Lokasi 2: TexCoord
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
-    }
-};
+// Forward declaration biar tidak circular dependency
+class PrimitiveMesh; 
 
 class Model {
 public:
     void loadModel(VkDevice device, VkPhysicalDevice physDevice, const std::string& filepath);
-    void draw(VkCommandBuffer cmd); // Fungsi untuk menggambar model ini
+    void draw(VkCommandBuffer cmd); 
     void cleanup(VkDevice device);
 
+    // Fungsi load data manual (untuk Primitive Mesh)
+    // Note: Kita ganti parameternya jadi vector langsung biar lebih fleksibel dan tidak wajib include PrimitiveMesh.hpp di sini
+    void loadFromMesh(VkDevice device, VkPhysicalDevice physDevice, const std::vector<Vertex>& inVertices, const std::vector<uint32_t>& inIndices) {
+        this->vertices = inVertices;
+        this->indices = inIndices;
+        createVertexBuffer(device, physDevice);
+        createIndexBuffer(device, physDevice);
+    }
+
 private:
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-    uint32_t vertexCount;
+    // Data CPU
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+    
+    // Data GPU (Buffer)
+    // [FIX] Hanya deklarasikan SEKALI dengan inisialisasi
+    VkBuffer vertexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+    VkBuffer indexBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
+    
+    uint32_t indexCount = 0;
+    uint32_t vertexCount = 0;
 
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
-    uint32_t indexCount;
-
-    // Helper internal untuk membuat buffer GPU
+    // Helper internal
     void createBuffer(VkDevice device, VkPhysicalDevice physDevice, VkDeviceSize size, 
                       VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, 
                       VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+                      
+    void createVertexBuffer(VkDevice device, VkPhysicalDevice physicalDevice);
+    void createIndexBuffer(VkDevice device, VkPhysicalDevice physicalDevice);
 };

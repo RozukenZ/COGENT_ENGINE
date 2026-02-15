@@ -13,3 +13,5 @@ D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp;D:\MyProject\COGENT_ENG
 D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_widgets.obj
 D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\EditorUI.obj
 D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ImGuizmo.obj
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\PrimitiveMesh.obj
+D:\MyProject\COGENT_ENGINE\RayTracing\RayTracer.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\RayTracer.obj

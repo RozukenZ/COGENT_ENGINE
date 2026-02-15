@@ -2,10 +2,10 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "MinSizeRel/COGENT_Engine.exe"
+			"path" : "RelWithDebInfo/COGENT_Engine.exe"
 		},
 		{
-			"path" : "MinSizeRel/COGENT_Engine.pdb"
+			"path" : "RelWithDebInfo/COGENT_Engine.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -29,19 +29,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 42,
+				"line" : 45,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 62,
+				"line" : 67,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 46,
+				"line" : 49,
 				"parent" : 0
 			}
 		]
@@ -64,7 +64,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MD /O1 /Ob1 /DNDEBUG -std:c++17"
+					"fragment" : "/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MD /Zi /O2 /Ob1 /DNDEBUG -std:c++17"
 				}
 			],
 			"includes" : 
@@ -115,6 +115,10 @@
 				},
 				{
 					"backtrace" : 3,
+					"path" : "D:/MyProject/COGENT_ENGINE/RayTracing"
+				},
+				{
+					"backtrace" : 3,
 					"isSystem" : true,
 					"path" : "D:/SDK/Vulkan/include"
 				}
@@ -144,7 +148,9 @@
 				16,
 				17,
 				18,
-				19
+				19,
+				20,
+				22
 			]
 		}
 	],
@@ -160,11 +166,11 @@
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MD /O1 /Ob1 /DNDEBUG",
+				"fragment" : "/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MD /Zi /O2 /Ob1 /DNDEBUG",
 				"role" : "flags"
 			},
 			{
-				"fragment" : "/machine:x64 /INCREMENTAL:NO",
+				"fragment" : "/machine:x64 /debug /INCREMENTAL",
 				"role" : "flags"
 			},
 			{
@@ -226,7 +232,9 @@
 				16,
 				17,
 				18,
-				19
+				19,
+				20,
+				22
 			]
 		},
 		{
@@ -237,7 +245,8 @@
 				5,
 				8,
 				9,
-				10
+				10,
+				21
 			]
 		}
 	],
@@ -356,6 +365,23 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "Vendor/ImGuizmo/ImGuizmo.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "Geometry/PrimitiveMesh.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "Geometry/PrimitiveMesh.hpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "RayTracing/RayTracer.cpp",
 			"sourceGroupIndex" : 0
 		}
 	],

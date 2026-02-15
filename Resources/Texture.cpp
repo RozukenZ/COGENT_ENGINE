@@ -12,32 +12,46 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     // 1. Load Pixel Data dari File (CPU)
     stbi_uc* pixels = stbi_load(filepath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     
+    bool isFallback = false;
     if (!pixels) {
-        throw std::runtime_error("Gagal memuat texture: " + filepath);
+        std::cerr << "WARNING: Gagal memuat texture: " << filepath << ". Menggunakan fallback texture (Putih 1x1)." << std::endl;
+        texWidth = 1;
+        texHeight = 1;
+        texChannels = 4;
+        pixels = (stbi_uc*)malloc(4 * sizeof(stbi_uc));
+        pixels[0] = 255; pixels[1] = 255; pixels[2] = 255; pixels[3] = 255;
+        isFallback = true;
     }
+
+    // ... (pixels loaded or fallback created)
 
     VkDeviceSize imageSize = texWidth * texHeight * 4; // RGBA = 4 bytes
     width = static_cast<uint32_t>(texWidth);
     height = static_cast<uint32_t>(texHeight);
 
+    std::cout << "Texture::load -> imageSize: " << imageSize << ", width: " << width << ", height: " << height << std::endl;
+
     // 2. Buat Staging Buffer (Transfer CPU -> GPU)
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     
-    // (Kita asumsikan kamu punya helper createBuffer di VulkanUtils.hpp, kalau belum, copy logika dari main.cpp)
-    // Untuk sekarang kita tulis manual createBuffer sederhana di sini biar aman:
     VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufferInfo.size = imageSize;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
+    if (vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create staging buffer!");
+    }
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
     VkMemoryAllocateInfo allocInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(physDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
+    
+    if (vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory) != VK_SUCCESS) {
+        throw std::runtime_error("failed to allocate staging buffer memory!");
+    }
     vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
 
     // Copy data pixels ke Staging Buffer
@@ -46,14 +60,24 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     memcpy(data, pixels, static_cast<size_t>(imageSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
-    stbi_image_free(pixels); // Hapus data di CPU karena sudah masuk Staging Buffer
+    if (isFallback) {
+        free(pixels);
+    } else {
+        stbi_image_free(pixels); 
+    }
 
     // 3. Buat Image Object di GPU (VRAM)
+    std::cout << "Texture::load -> Creating Image..." << std::endl;
     createImage(device, physDevice, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
     // 4. Transisi Layout & Copy Buffer to Image
+    std::cout << "Texture::load -> Transition Layout (Undefined -> TransferDst)..." << std::endl;
     transitionImageLayout(device, commandPool, graphicsQueue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    
+    std::cout << "Texture::load -> Copy Buffer to Image..." << std::endl;
     copyBufferToImage(device, commandPool, graphicsQueue, stagingBuffer, textureImage, width, height);
+    
+    std::cout << "Texture::load -> Transition Layout (TransferDst -> ShaderReadOnly)..." << std::endl;
     transitionImageLayout(device, commandPool, graphicsQueue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     // Bersihkan Staging Buffer
@@ -61,6 +85,7 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 
     // 5. Create Image View
+    std::cout << "Texture::load -> Create Image View..." << std::endl;
     VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     viewInfo.image = textureImage;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -70,9 +95,12 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
-    vkCreateImageView(device, &viewInfo, nullptr, &textureImageView);
+    if (vkCreateImageView(device, &viewInfo, nullptr, &textureImageView) != VK_SUCCESS) {
+         throw std::runtime_error("failed to create image view!");
+    }
 
     // 6. Create Sampler
+    std::cout << "Texture::load -> Create Sampler..." << std::endl;
     VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
@@ -92,7 +120,11 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-    vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler);
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create sampler!");
+    }
+    
+    std::cout << "Texture::load -> Done!" << std::endl;
 }
 
 void Texture::cleanup(VkDevice device) {

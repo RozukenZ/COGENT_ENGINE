@@ -36,6 +36,9 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_widgets.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Editor/EditorUI.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo/ImGuizmo.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/RayTracing/RayTracer.cpp
 )
 
 # 3. Create Executable
@@ -55,7 +58,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo"
     "${CMAKE_CURRENT_SOURCE_DIR}/Editor"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scene"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Geometry"
+    ${CMAKE_CURRENT_SOURCE_DIR}/Scene
+    ${CMAKE_CURRENT_SOURCE_DIR}/Geometry
+    "${CMAKE_CURRENT_SOURCE_DIR}/RayTracing"
 )
 
 # 5. LINK LIBRARIES

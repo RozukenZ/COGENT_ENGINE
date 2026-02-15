@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <array>
+#include "Types.hpp"
+#include "Model.hpp"
 
 // Helper membaca file binary .spv
 std::vector<char> RenderPipeline::readFile(const std::string& filename) {
@@ -117,9 +119,11 @@ void RenderPipeline::init(VkDevice device, VkRenderPass renderPass, VkExtent2D e
     // 6. PIPELINE LAYOUT (Push Constants & Descriptors)
     // Setup Push Constant untuk mengirim Model Matrix
     VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // [FIX] Fragment juga butuh warna
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(glm::mat4);
+    
+    // [FIX] Update ukuran agar sesuai struct ObjectPushConstant
+    pushConstantRange.size = sizeof(ObjectPushConstant); 
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

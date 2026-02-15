@@ -5,41 +5,13 @@
 #include <iostream>
 #include <unordered_map>
 #include "../Core/VulkanUtils.hpp"
+#include "../Core/Types.hpp" // Hashes are already defined here!
 
-// Helper untuk hashing vertex agar bisa disimpan di unordered_map
-namespace std {
-    template<> struct hash<glm::vec3> {
-        size_t operator()(glm::vec3 const& v) const {
-            size_t h = 0;
-            h ^= hash<float>()(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-            h ^= hash<float>()(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-            h ^= hash<float>()(v.z) + 0x9e3779b9 + (h << 6) + (h >> 2);
-            return h;
-        }
-    };
+// [FIX] REMOVED the 'namespace std { hash... }' block entirely.
+// It is now inside Types.hpp, so we don't need it here.
 
-    template<> struct hash<glm::vec2> {
-        size_t operator()(glm::vec2 const& v) const {
-            size_t h = 0;
-            h ^= hash<float>()(v.x) + 0x9e3779b9 + (h << 6) + (h >> 2);
-            h ^= hash<float>()(v.y) + 0x9e3779b9 + (h << 6) + (h >> 2);
-            return h;
-        }
-    };
-
-    template<> struct hash<Vertex> {
-        size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.pos) ^
-                   (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-                   (hash<glm::vec2>()(vertex.texCoord) << 1);
-        }
-    };
-}
-
-// Operator == diperlukan untuk unordered_map
-bool operator==(const Vertex& lhs, const Vertex& rhs) {
-    return lhs.pos == rhs.pos && lhs.normal == rhs.normal && lhs.texCoord == rhs.texCoord;
-}
+// [FIX] REMOVED 'bool operator=='
+// It is now inside the Vertex struct in Types.hpp.
 
 void Model::loadModel(VkDevice device, VkPhysicalDevice physDevice, const std::string& filepath) {
     tinyobj::attrib_t attrib;
@@ -47,28 +19,29 @@ void Model::loadModel(VkDevice device, VkPhysicalDevice physDevice, const std::s
     std::vector<tinyobj::material_t> materials;
     std::string warn, err;
 
-    // 1. Baca File .OBJ
+    // Load file .obj
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
-        throw std::runtime_error("Gagal memuat model: " + warn + err);
+        throw std::runtime_error("Failed to load model: " + warn + err);
     }
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
+    // Temporary container
+    std::vector<Vertex> localVertices;
+    std::vector<uint32_t> localIndices;
     std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
-    // 2. Konversi Data OBJ ke Format Vertex Kita
+    // Loop over shapes
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             Vertex vertex{};
 
-            // Ambil Posisi
+            // Position
             vertex.pos = {
                 attrib.vertices[3 * index.vertex_index + 0],
                 attrib.vertices[3 * index.vertex_index + 1],
                 attrib.vertices[3 * index.vertex_index + 2]
             };
 
-            // Ambil Normal (Jika ada)
+            // Normal
             if (index.normal_index >= 0) {
                 vertex.normal = {
                     attrib.normals[3 * index.normal_index + 0],
@@ -77,54 +50,96 @@ void Model::loadModel(VkDevice device, VkPhysicalDevice physDevice, const std::s
                 };
             }
 
-            // Ambil TexCoord (Jika ada)
+            // TexCoord
             if (index.texcoord_index >= 0) {
                 vertex.texCoord = {
                     attrib.texcoords[2 * index.texcoord_index + 0],
-                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V karena Vulkan koordinatnya terbalik
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1] // Flip V
                 };
             }
 
-            // Deduplikasi Vertex (Optimasi Memori)
+            // Color (Default Putih)
+            vertex.color = {1.0f, 1.0f, 1.0f};
+
+            // Deduplikasi Vertex
             if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                vertices.push_back(vertex);
+                uniqueVertices[vertex] = static_cast<uint32_t>(localVertices.size());
+                localVertices.push_back(vertex);
             }
-            indices.push_back(uniqueVertices[vertex]);
+            localIndices.push_back(uniqueVertices[vertex]);
         }
     }
 
-    vertexCount = static_cast<uint32_t>(vertices.size());
-    indexCount = static_cast<uint32_t>(indices.size());
+    // Simpan ke member class
+    this->vertices = localVertices;
+    this->indices = localIndices;
 
-    // 3. Upload ke GPU (Vertex Buffer)
+    // Buat Buffer Vulkan
+    createVertexBuffer(device, physDevice);
+    createIndexBuffer(device, physDevice);
+
+    std::cout << "Model loaded: " << filepath << " (Vertices: " << vertices.size() << ")" << std::endl;
+}
+
+// [NEW] Implementation of createVertexBuffer to keep code clean
+void Model::createVertexBuffer(VkDevice device, VkPhysicalDevice physDevice) {
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+
+    // Create Staging Buffer (Host Visible)
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(device, physDevice, bufferSize, 
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                 stagingBuffer, stagingBufferMemory);
+
+    // Map and Copy
+    void* data;
+    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(device, stagingBufferMemory);
+
+    // Create Vertex Buffer (Device Local - Fast)
+    createBuffer(device, physDevice, bufferSize, 
+                 VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+                 vertexBuffer, vertexBufferMemory);
+
+    // Copy from Staging to Vertex Buffer
+    // (You need a copyBuffer helper, or for now just use Host Visible for simplicity if copyBuffer is missing)
+    // For simplicity in this fix, I will assume you are using the previous Host Visible logic directly:
     
-    // Note: Di engine production, kita pakai Staging Buffer. 
-    // Untuk sekarang kita pakai Host Visible dulu biar simpel, nanti dioptimize.
+    // [FALLBACK SIMPLE VERSION IF copyBuffer IS MISSING]
+    // Re-create as HOST_VISIBLE for now to avoid complexity
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(device, vertexBuffer, nullptr);
+    vkFreeMemory(device, vertexBufferMemory, nullptr);
+
     createBuffer(device, physDevice, bufferSize, 
                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                  vertexBuffer, vertexBufferMemory);
-
-    void* data;
+    
     vkMapMemory(device, vertexBufferMemory, 0, bufferSize, 0, &data);
     memcpy(data, vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, vertexBufferMemory);
+}
 
-    // 4. Upload ke GPU (Index Buffer)
-    VkDeviceSize indexBufferSize = sizeof(indices[0]) * indices.size();
-    createBuffer(device, physDevice, indexBufferSize, 
+void Model::createIndexBuffer(VkDevice device, VkPhysicalDevice physDevice) {
+    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    
+    createBuffer(device, physDevice, bufferSize, 
                  VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
                  indexBuffer, indexBufferMemory);
 
-    void* indexData;
-    vkMapMemory(device, indexBufferMemory, 0, indexBufferSize, 0, &indexData);
-    memcpy(indexData, indices.data(), (size_t)indexBufferSize);
+    void* data;
+    vkMapMemory(device, indexBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices.data(), (size_t)bufferSize);
     vkUnmapMemory(device, indexBufferMemory);
-
-    std::cout << "Model loaded: " << filepath << " (Vertices: " << vertexCount << ")" << std::endl;
+    
+    indexCount = static_cast<uint32_t>(indices.size());
 }
 
 void Model::draw(VkCommandBuffer cmd) {
@@ -161,6 +176,9 @@ void Model::createBuffer(VkDevice device, VkPhysicalDevice physDevice, VkDeviceS
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
+    
+    // Assuming findMemoryType is defined in VulkanUtils or copied here
+    // If external, include header. If inside Model, ensure declaration exists.
     allocInfo.memoryTypeIndex = findMemoryType(physDevice, memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {

@@ -46,6 +46,12 @@
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\RayTracing\RayTracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Renderer\RenderPipeline.hpp">
@@ -61,6 +67,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

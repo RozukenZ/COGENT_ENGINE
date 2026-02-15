@@ -42,6 +42,7 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
 
     // 3. Apply Ultra Modern Theme
     ApplyModernDarkTheme();
@@ -67,8 +68,8 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-// [FIX] Parameter fungsi ditambahkan: camera & selectedObject
-void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject) {
+// [FIX] Parameter fungsi ditambahkan: camera & selectedObject & gameObjects & selectedIndex & sceneTexture
+void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture) {
     
     // 1. Setup Frame ImGui
     ImGui_ImplVulkan_NewFrame();
@@ -101,7 +102,7 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
     else if (currentState == AppState::EDITOR) {
         // [FIX] Passing data Camera & Object ke Workspace
         // Agar Gizmo dan Inspector bisa bekerja!
-        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject);
+        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject, gameObjects, selectedIndex, sceneTexture);
     }
 
     // 4. Render Draw Data
@@ -714,135 +715,88 @@ void EditorUI::RenderFolderBrowserModal() {
 //                          MODERN EDITOR WORKSPACE
 // ==================================================================================
 
-   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject) {
+   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture) {
     
-    // 1. Top Menu Bar
+    // 1. Setup DockSpace
+    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+    // [FIX] Define Gizmo Variables
+    static ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
+    static ImGuizmo::MODE currentGizmoMode = ImGuizmo::WORLD;
+
+    // 2. Main Menu Bar
     if (ImGui::BeginMainMenuBar()) {
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
         ImGui::Text("COGENT ENGINE");
         ImGui::PopStyleColor();
-        
         ImGui::Separator();
         
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Save", "Ctrl+S")) {}
-            if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {}
-            ImGui::Separator();
             if (ImGui::MenuItem("Exit", "Alt+F4")) exit(0);
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {}
-            if (ImGui::MenuItem("Redo", "Ctrl+Y")) {}
-            ImGui::EndMenu();
-        }
         if (ImGui::BeginMenu("Window")) {
-            if (ImGui::MenuItem("Performance")) {}
-            if (ImGui::MenuItem("Tools")) {}
+            ImGui::MenuItem("Scene", NULL, true);
+            ImGui::MenuItem("Inspector", NULL, true);
+            ImGui::MenuItem("Hierarchy", NULL, true);
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("Documentation")) {}
-            if (ImGui::MenuItem("About")) {}
-            ImGui::EndMenu();
-        }
-        
-        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 200);
-        ImGui::TextDisabled("FPS: %.0f", 1.0f / deltaTime);
-        
+             
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
+        ImGui::TextDisabled("%.1f FPS", 1.0f / deltaTime);
         ImGui::EndMainMenuBar();
     }
 
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    
-    // 2. Toolbar
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20));
-    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, 60));
-    
-    ImGuiWindowFlags barFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | 
-                                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
-    
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.10f, 0.95f));
-    ImGui::Begin("Toolbar", nullptr, barFlags);
-        
-        ImGui::Dummy(ImVec2(0, 8)); 
-        ImGui::SameLine(viewport->Size.x / 2 - 150); 
-        
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
-        
-        // Play Button
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.60f, 0.30f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.70f, 0.35f, 1.0f));
-        if(ImGui::Button("PLAY", ImVec2(90, 40))) {}
-        ImGui::PopStyleColor(2);
-        
+    // 3. Toolbar (Top)
+    ImGui::Begin("Toolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar);
+        ImGui::Dummy(ImVec2(0, 4));
+        ImGui::SameLine(ImGui::GetWindowWidth() / 2 - 100);
+        if(ImGui::Button("PLAY", ImVec2(60, 30))) {}
         ImGui::SameLine();
-        
-        // Pause Button
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.50f, 0.20f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.60f, 0.25f, 1.0f));
-        if(ImGui::Button("PAUSE", ImVec2(90, 40))) {}
-        ImGui::PopStyleColor(2);
-        
-        ImGui::SameLine();
-        
-        // Stop Button
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.70f, 0.20f, 0.20f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.80f, 0.25f, 0.25f, 1.0f));
-        if(ImGui::Button("STOP", ImVec2(90, 40))) {}
-        ImGui::PopStyleColor(2);
-        
-        ImGui::PopStyleVar();
-        
+        if(ImGui::Button("STOP", ImVec2(60, 30))) {}
     ImGui::End();
-    ImGui::PopStyleColor();
 
-    // 3. ImGuizmo Setup (Transform Gizmo)
-    // Setup for Gizmo Logic
-    static ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
-    static ImGuizmo::MODE currentGizmoMode = ImGuizmo::WORLD;
-
-    if (showCursor) {
-        ImGuizmo::BeginFrame();
-        ImGuizmo::Enable(true);
-
-        ImGuiIO& io = ImGui::GetIO();
-        ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
-
-        // Calculate Camera Matrices for Gizmo
-        glm::mat4 viewMatrix = camera.getViewMatrix();
-        float aspectRatio = io.DisplaySize.x / io.DisplaySize.y;
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
-        projectionMatrix[1][1] *= -1; 
-
-        // Draw Gizmo
-        ImGuizmo::Manipulate(
-            glm::value_ptr(viewMatrix),
-            glm::value_ptr(projectionMatrix),
-            currentGizmoOperation,
-            currentGizmoMode,
-            glm::value_ptr(selectedObject.model)
-        );
+    // 4. Scene View (The Central Node)
+    // We render the texture here!
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0)); // No padding for image
+    ImGui::Begin("Scene View");
+        // Get Window Size for Aspect Ratio
+        ImVec2 windowSize = ImGui::GetContentRegionAvail();
         
-        // Keyboard Shortcuts (W, E, R)
-        if (!ImGui::GetIO().WantCaptureKeyboard) {
-            if (ImGui::IsKeyPressed(ImGuiKey_W)) currentGizmoOperation = ImGuizmo::TRANSLATE;
-            if (ImGui::IsKeyPressed(ImGuiKey_E)) currentGizmoOperation = ImGuizmo::ROTATE;
-            if (ImGui::IsKeyPressed(ImGuiKey_R)) currentGizmoOperation = ImGuizmo::SCALE;
+        if (sceneTexture) {
+            ImGui::Image((ImTextureID)sceneTexture, windowSize);
+        } else {
+             ImGui::TextDisabled("No Scene Texture Available");
         }
-    }
-
-    // 4. Inspector Panel
-    if (showCursor) {
-        float panelWidth = 350.0f;
-        ImGui::SetNextWindowPos(ImVec2(viewport->Size.x - panelWidth, 90));
-        ImGui::SetNextWindowSize(ImVec2(panelWidth, viewport->Size.y - 90));
         
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.08f, 0.10f, 0.98f));
-        
-        ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove);
+        // Gizmo Logic inside Scene Window
+        if (showCursor) {
+            ImGuizmo::SetDrawlist();
+            ImGuizmo::Enable(true);
             
+            ImVec2 windowPos = ImGui::GetWindowPos();
+            ImVec2 windowSize = ImGui::GetWindowSize();
+            ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+
+            // Calculate formatted Camera Matrices
+            glm::mat4 viewMatrix = camera.getViewMatrix();
+            glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), windowSize.x / windowSize.y, 0.1f, 1000.0f);
+            projectionMatrix[1][1] *= -1; 
+
+            ImGuizmo::Manipulate(
+                glm::value_ptr(viewMatrix),
+                glm::value_ptr(projectionMatrix),
+                currentGizmoOperation,
+                currentGizmoMode,
+                glm::value_ptr(selectedObject.model)
+            );
+        }
+    ImGui::End();
+    // Setup for Gizmo Logic
+    // 5. Inspector Panel
+    ImGui::Begin("Inspector");
+        if (selectedObject.id != -1) {
             ImGui::SetWindowFontScale(1.2f);
             ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "INSPECTOR");
             ImGui::SetWindowFontScale(1.0f);
@@ -850,14 +804,11 @@ void EditorUI::RenderFolderBrowserModal() {
             ImGui::Dummy(ImVec2(0, 10));
             
             // Transform Section
-            ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.18f, 0.18f, 0.22f, 1.0f));
             if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Indent(10);
-                
                 // Gizmo Operation Selection
-                ImGui::Text("Operation:");
-                if (ImGui::RadioButton("Translate", currentGizmoOperation == ImGuizmo::TRANSLATE)) currentGizmoOperation = ImGuizmo::TRANSLATE; ImGui::SameLine();
-                if (ImGui::RadioButton("Rotate", currentGizmoOperation == ImGuizmo::ROTATE)) currentGizmoOperation = ImGuizmo::ROTATE; ImGui::SameLine();
+                ImGui::Text("Gizmo:");
+                if (ImGui::RadioButton("Trans", currentGizmoOperation == ImGuizmo::TRANSLATE)) currentGizmoOperation = ImGuizmo::TRANSLATE; ImGui::SameLine();
+                if (ImGui::RadioButton("Rot", currentGizmoOperation == ImGuizmo::ROTATE)) currentGizmoOperation = ImGuizmo::ROTATE; ImGui::SameLine();
                 if (ImGui::RadioButton("Scale", currentGizmoOperation == ImGuizmo::SCALE)) currentGizmoOperation = ImGuizmo::SCALE;
                 ImGui::Dummy(ImVec2(0, 10));
 
@@ -879,83 +830,43 @@ void EditorUI::RenderFolderBrowserModal() {
                 if (valuesChanged) {
                     ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(selectedObject.model));
                 }
-
-                ImGui::Unindent(10);
             }
-            ImGui::PopStyleColor();
             
             ImGui::Dummy(ImVec2(0, 20));
 
-            // Material Section (Color Wheel)
+            // Material Section
             if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::Indent(10);
                 ImGui::Text("Albedo Color");
-                
-                // Color Picker connecting directly to ObjectPushConstant color
                 ImGui::ColorPicker4("##picker", glm::value_ptr(selectedObject.color), ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
-                
-                ImGui::Dummy(ImVec2(0, 10));
-                
-                ImGui::Unindent(10);
             }
-            
-            ImGui::Dummy(ImVec2(0, 20));
-            
-            // Add Component
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
-            if (ImGui::Button("Add Component", ImVec2(-1, 40))) {
-                ImGui::OpenPopup("AddComponent");
-            }
-            ImGui::PopStyleVar();
-            ImGui::PopStyleColor();
-            
-            if (ImGui::BeginPopup("AddComponent")) {
-                ImGui::Text("Components");
-                ImGui::Separator();
-                if (ImGui::Selectable("Sphere Mesh")) {}
-                if (ImGui::Selectable("Cube Mesh")) {}
-                if (ImGui::Selectable("Physics Body")) {}
-                ImGui::EndPopup();
-            }
-            
-        ImGui::End();
-        ImGui::PopStyleColor();
-        ImGui::PopStyleVar();
-    }
+        } else {
+            ImGui::TextDisabled("No object selected.");
+        }
+    ImGui::End();
+
+    // 6. Hierarchy Panel
+    RenderHierarchy(gameObjects, selectedIndex);
 }
 
 // Tambahkan parameter list object dan index yang dipilih
 void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex) {
-    
-    // Panel di Kiri (Hierarchy)
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + 20 + 60)); // Di bawah Toolbar
-    ImGui::SetNextWindowSize(ImVec2(300, viewport->Size.y - 80)); // Lebar 300px
-    
-    ImGui::Begin("Hierarchy", nullptr, ImGuiWindowFlags_NoCollapse);
-
+    ImGui::Begin("Hierarchy");
     // Loop semua object
     for (int i = 0; i < objects.size(); i++) {
-        // Setup Flag agar bisa di-klik (Selected)
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
         if (selectedIndex == i) {
             flags |= ImGuiTreeNodeFlags_Selected;
         }
 
-        // Tampilkan Nama Object
         ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "%s", objects[i].name.c_str());
 
-        // Logic Klik
         if (ImGui::IsItemClicked()) {
             selectedIndex = i;
         }
     }
-
     // Klik area kosong untuk unselect
     if (ImGui::IsMouseDown(0) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
         selectedIndex = -1;
     }
-
     ImGui::End();
 }
