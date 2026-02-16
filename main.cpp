@@ -28,6 +28,7 @@
 #include "Core/Camera.hpp"
 #include "Editor/EditorUI.hpp"
 #include "Geometry/PrimitiveMesh.hpp"
+#include "Core/Logger.hpp" // [NEW] Logger
 
 
 const uint32_t WIDTH = 1920;
@@ -42,6 +43,9 @@ struct QueueFamilyIndices {
         return graphicsFamily.has_value() && computeFamily.has_value();
     }
 };
+
+// [LOGGING] Redirect std::cout to Logger (Optional, but good for consistency)
+// Not implemented here to avoid complexity, but we will use LOG_INFO macros.
 
 // Global Variables untuk Input Mouse
 Camera mainCamera(glm::vec3(2.0f, 2.0f, 2.0f));
@@ -138,7 +142,20 @@ public:
             exit(-1);
         }
         std::cout << "--- ALL SYSTEMS GO ---" << std::endl;
-        mainLoop();
+        LOG_INFO("--- ALL SYSTEMS GO ---");
+
+        try {
+            mainLoop();
+        } catch (const std::exception& e) {
+            LOG_ERROR("CRITICAL EXCEPTION IN MAIN LOOP: " + std::string(e.what()));
+            std::cerr << "CRITICAL EXCEPTION: " << e.what() << std::endl;
+            int x; std::cin >> x; 
+        } catch (...) {
+            LOG_ERROR("CRITICAL UNKNOWN EXCEPTION IN MAIN LOOP");
+            std::cerr << "CRITICAL UNKNOWN EXCEPTION" << std::endl;
+            int x; std::cin >> x; 
+        }
+
         cleanup();
     }
 
@@ -1506,17 +1523,17 @@ private:
 };
 
 int main() {
+    // 1. Init Logging
+    LOG_INIT("cogent_log.txt");
+    LOG_INFO("COGENT ENGINE STARTED");
+
     CogentEngine app;
+
     try {
         app.run();
     } catch (const std::exception& e) {
-        // Ini akan mencetak alasan errornya
-        std::cerr << "[CRITICAL ERROR] " << e.what() << std::endl;
-        
-        // Tahan window biar kita bisa baca errornya
-        std::cout << "\nPress ENTER to close..." << std::endl;
-        std::cin.get(); 
-        
+        LOG_ERROR("FATAL ERROR: " + std::string(e.what()));
+        std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;

@@ -49,5 +49,5 @@ private:
     bool showFolderBrowser = false; // Flag visual
     bool openFolderPopup = false;   // Trigger untuk OpenPopup
     std::string currentPath = ".";  // [FIX] Default ke folder project biar aman
-    std::string selectedPath = "D:/MyProjects";
+    std::string selectedPath = "."; // [FIX] Default ke folder project biar aman
 };

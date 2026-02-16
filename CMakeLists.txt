@@ -27,6 +27,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Types.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/VulkanUtils.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Camera.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Logger.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_draw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_demo.cpp

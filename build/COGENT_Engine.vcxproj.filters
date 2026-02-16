@@ -69,6 +69,9 @@
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Camera.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Logger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

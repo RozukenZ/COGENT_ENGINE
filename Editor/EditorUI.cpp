@@ -6,6 +6,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "Types.hpp"
 #include "Camera.hpp"
+#include "Logger.hpp" // [NEW] Include Logger
 
 namespace fs = std::filesystem;
 
@@ -86,17 +87,21 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
         RenderLoadingScreen(currentState);
     } 
     else if (currentState == AppState::PROJECT_MENU) {
-        RenderProjectHub(currentState, showCursor);
-        
-        // [FIX UTAMA] Logic Popup tetap dipertahankan disini
-        if (openFolderPopup) {
-            ImGui::OpenPopup("Select Folder"); 
-            openFolderPopup = false;           
-            showFolderBrowser = true;
-        }
+        try {
+            RenderProjectHub(currentState, showCursor);
+            
+            // [FIX] Logic Folder Browser (Floating Window)
+            if (openFolderPopup) {
+                showFolderBrowser = true;
+                openFolderPopup = false;
+            }
 
-        if (showFolderBrowser) {
-            RenderFolderBrowserModal();
+            if (showFolderBrowser) {
+                RenderFolderBrowserModal();
+            }
+            LOG_INFO("RenderProjectHub Finished");
+        } catch (const std::exception& e) {
+            LOG_ERROR("Exception in ProjectHub: " + std::string(e.what()));
         }
     } 
     else if (currentState == AppState::EDITOR) {
@@ -106,11 +111,19 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
     }
 
     // 4. Render Draw Data
+    LOG_INFO("ImGui::Render() Starting...");
     ImGui::Render();
+    LOG_INFO("ImGui::Render() Finished");
 }
 
 void EditorUI::Draw(VkCommandBuffer commandBuffer) {
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+    LOG_INFO("EditorUI::Draw called");
+    if (ImGui::GetDrawData()) {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+        LOG_INFO("ImGui_ImplVulkan_RenderDrawData Finished");
+    } else {
+        LOG_WARN("ImGui::GetDrawData() returned NULL!");
+    }
 }
 
 void EditorUI::Cleanup(VkDevice device) {
@@ -279,6 +292,9 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
     ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
     ImGui::Begin("Hub", nullptr, flags);
 
+    // [LOG] Start Hub
+    // LOG_INFO("Project Hub Rendered");
+
     ImGui::Columns(2, "HubSplit", false);
     ImGui::SetColumnWidth(0, 320);
 
@@ -378,7 +394,11 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         
         ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
-        if (ImGui::Button("OPEN", ImVec2(100, 40))) { currentState = AppState::EDITOR; showCursor = false; }
+        if (ImGui::Button("OPEN", ImVec2(100, 40))) { 
+            LOG_INFO("Opening Demo Project: FPS Shooter");
+            currentState = AppState::EDITOR; 
+            showCursor = false; 
+        }
         ImGui::PopStyleColor();
         ImGui::EndChild();
         
@@ -392,7 +412,11 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         
         ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
-        if (ImGui::Button("OPEN##2", ImVec2(100, 40))) { currentState = AppState::EDITOR; showCursor = false; }
+        if (ImGui::Button("OPEN##2", ImVec2(100, 40))) { 
+            LOG_INFO("Opening Demo Project: RPG Open World");
+            currentState = AppState::EDITOR; 
+            showCursor = false; 
+        }
         ImGui::PopStyleColor();
         ImGui::EndChild();
         
@@ -406,9 +430,10 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
         
-        // [FIX UTAMA] Set Trigger untuk Popup
+        // [FIX UTAMA] Logic Show New Project (Toggle Flag Overlay)
         if (ImGui::Button("NEW PROJECT", ImVec2(200, 50))) {
-            openNewProjectPopup = true; 
+            LOG_INFO("Button [NEW PROJECT] Clicked");
+            showNewProjectModal = true;
         }
         
         ImGui::SameLine();
@@ -418,6 +443,9 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         if (ImGui::Button("OPEN FROM DISK", ImVec2(200, 50))) { }
         
         ImGui::PopStyleColor();
+
+
+
         ImGui::PopStyleVar();
     } 
     else {
@@ -426,21 +454,33 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::TextDisabled("This section is under construction...");
     }
 
-    // --- MODAL POPUP HANDLING (LOGIC FIX) ---
-    // Panggil OpenPopup HANYA jika trigger aktif
-    if (openNewProjectPopup) {
-        ImGui::OpenPopup("Create New Project");
-        openNewProjectPopup = false; 
-    }
+    // --- CREATE PROJECT OVERLAY ---
+    // If flag is active, render the Create Form INSTEAD of using a Popup
+    if (showNewProjectModal) {
+        // [1] DIMMER BACKGROUND
+        // Render a full-screen invisible window with a semi-transparent background to block input to the Hub
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+        ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.7f));
+        ImGui::Begin("##Dimmer", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGui::End();
+        ImGui::PopStyleColor();
 
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(600, 450));
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
-    if (ImGui::BeginPopupModal("Create New Project", NULL, ImGuiWindowFlags_NoResize)) {
+        // [2] CREATE PROJECT WINDOW (Floating, Centered)
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(600, 450));
         
-        ImGui::SetWindowFontScale(1.5f);
+        // Styling for the Modal
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f); // Make input fields nicer
+        
+        // Use ImGui::Begin() to create a true floating window
+        // Note: We use a unique name to ensure it's treated as a new window
+        ImGui::Begin("Create New Project", &showNewProjectModal, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking);
+        
+        ImGui::SetWindowFontScale(1.3f);
         ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "Create New Project");
         ImGui::SetWindowFontScale(1.0f);
         
@@ -451,7 +491,12 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::Text("Project Name");
         ImGui::Dummy(ImVec2(0, 5));
         ImGui::PushItemWidth(-1);
-        ImGui::InputTextWithHint("##Name", "Enter project name...", projectNameBuffer, 128);
+        
+        // Ensure buffer is valid
+        if (projectNameBuffer != nullptr) {
+             ImGui::InputTextWithHint("##Name", "Enter project name...", projectNameBuffer, 128);
+        }
+        
         ImGui::PopItemWidth();
         
         ImGui::Dummy(ImVec2(0, 20));
@@ -459,29 +504,37 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::Dummy(ImVec2(0, 5));
         
         ImGui::PushItemWidth(-120);
-        char pathBuf[256];
-        strncpy(pathBuf, selectedPath.c_str(), 255);
+        
+        // Safer String Copy
+        char pathBuf[256] = {0}; 
+        snprintf(pathBuf, sizeof(pathBuf), "%s", selectedPath.c_str());
+        
         ImGui::InputText("##Path", pathBuf, 256, ImGuiInputTextFlags_ReadOnly);
         ImGui::PopItemWidth();
         
         ImGui::SameLine();
+        
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
         
-        // [FIX] Trigger Folder Browser Popup
+        // Trigger generic folder popup (which is robust)
         if (ImGui::Button("Browse...", ImVec2(100, 0))) {
             openFolderPopup = true; 
         }
-        ImGui::PopStyleColor();
         
+        ImGui::PopStyleColor();
         ImGui::Dummy(ImVec2(0, 20));
+        
         ImGui::Text("Project Template");
         ImGui::Dummy(ImVec2(0, 10));
         
         static int selectedTemplate = 0;
-        ImGui::RadioButton("First Person", &selectedTemplate, 0); ImGui::SameLine(200);
+        ImGui::RadioButton("First Person", &selectedTemplate, 0); 
+        ImGui::SameLine(200);
         ImGui::RadioButton("Third Person", &selectedTemplate, 1);
         ImGui::Dummy(ImVec2(0, 5));
-        ImGui::RadioButton("Vehicle", &selectedTemplate, 2); ImGui::SameLine(200);
+        
+        ImGui::RadioButton("Vehicle", &selectedTemplate, 2); 
+        ImGui::SameLine(200);
         ImGui::RadioButton("Blank", &selectedTemplate, 3);
         
         ImGui::Dummy(ImVec2(0, 30));
@@ -492,23 +545,36 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth * 2 - 30);
         
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
         if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
-            ImGui::CloseCurrentPopup();
+            showNewProjectModal = false; // Just hide the overlay
         }
         ImGui::PopStyleColor();
         
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        
         if (ImGui::Button("CREATE", ImVec2(buttonWidth, 40))) {
-            currentState = AppState::EDITOR;
-            showCursor = false;
-            ImGui::CloseCurrentPopup();
+            if (std::string(projectNameBuffer).empty()) {
+                // Warning logic...
+            } else {
+                LOG_INFO("Creating Project: " + std::string(projectNameBuffer));
+                currentState = AppState::EDITOR;
+                showCursor = false;
+                showNewProjectModal = false;
+            }
         }
         ImGui::PopStyleColor();
         
-        ImGui::EndPopup();
+        ImGui::End(); // End Create Project Window
+        
+        ImGui::PopStyleVar(); // Pop WindowRounding (Create Project)
+        ImGui::PopStyleVar(); // Pop TitleBarRound (Create Project)
+        ImGui::PopStyleColor(); // Pop WindowBg (Create Project)
     }
-    ImGui::PopStyleVar();
+
+
+    // Old Modal Logic Removed
     
     ImGui::EndChild();
     ImGui::End();
@@ -519,16 +585,23 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
 // ==================================================================================
 
 void EditorUI::RenderFolderBrowserModal() {
-    // Set ukuran dan posisi window POPUP
-    ImGui::SetNextWindowSize(ImVec2(700, 500), ImGuiCond_Appearing);
+    // [1] DIMMER
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+    ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.7f));
+    ImGui::Begin("##DimmerFolder", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    // [2] BROWSER WINDOW
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(700, 500));
 
-    // Styling khusus untuk popup ini
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
     
-    // Mulai Modal
-    if (ImGui::BeginPopupModal("Select Folder", &showFolderBrowser, ImGuiWindowFlags_NoResize)) {
+    // Use standard window, not popup
+    if (ImGui::Begin("Select Folder", &showFolderBrowser, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking)) {
         
         // --- HEADER ---
         ImGui::SetWindowFontScale(1.3f);
@@ -557,8 +630,12 @@ void EditorUI::RenderFolderBrowserModal() {
         // Tombol Home User
         if (ImGui::Button("Home", ImVec2(80, 30))) {
             #ifdef _WIN32
-            const char* home = getenv("USERPROFILE");
-            if (home) currentPath = std::string(home);
+            char* buf = nullptr;
+            size_t sz = 0;
+            if (_dupenv_s(&buf, &sz, "USERPROFILE") == 0 && buf != nullptr) {
+                currentPath = std::string(buf);
+                free(buf);
+            }
             #else
             const char* home = getenv("HOME");
             if (home) currentPath = std::string(home);
@@ -593,11 +670,15 @@ void EditorUI::RenderFolderBrowserModal() {
         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
         ImGui::PushItemWidth(-1);
         
-        char pathDisplay[512];
-        // Safety copy string
-        strncpy(pathDisplay, currentPath.c_str(), sizeof(pathDisplay) - 1);
-        pathDisplay[sizeof(pathDisplay) - 1] = '\0';
-        
+        char pathDisplay[512] = {0};
+        if (currentPath.length() < 512) {
+             #ifdef _WIN32
+             strncpy_s(pathDisplay, currentPath.c_str(), 511);
+             #else
+             strncpy(pathDisplay, currentPath.c_str(), 511);
+             #endif
+        }
+
         ImGui::InputText("##CurrentPath", pathDisplay, 512, ImGuiInputTextFlags_ReadOnly);
         ImGui::PopItemWidth();
         ImGui::PopStyleColor();
@@ -625,7 +706,10 @@ void EditorUI::RenderFolderBrowserModal() {
                         std::string dirName;
                         try { 
                             dirName = entry.path().filename().string(); 
-                        } catch (...) { continue; } // Skip jika nama folder encoding error
+                        } catch (const std::exception& e) {
+                             LOG_WARN("Error reading filename: " + std::string(e.what()));
+                             continue; 
+                        } // Skip jika nama folder encoding error
 
                         // Skip folder sistem / hidden (biasanya diawali titik atau $)
                         if (dirName.empty() || dirName[0] == '$' || dirName[0] == '.') continue;
@@ -667,6 +751,7 @@ void EditorUI::RenderFolderBrowserModal() {
             ImGui::Dummy(ImVec2(0, 50));
             ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
             ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Access Denied");
+            LOG_ERROR("Exception in Folder Browser (Read Directory)");
         }
         
         ImGui::EndChild();
@@ -688,7 +773,6 @@ void EditorUI::RenderFolderBrowserModal() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
         if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
             showFolderBrowser = false;
-            ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor();
         
@@ -699,12 +783,11 @@ void EditorUI::RenderFolderBrowserModal() {
         if (ImGui::Button("✓ SELECT THIS FOLDER", ImVec2(buttonWidth, 40))) {
             selectedPath = currentPath; // Simpan path ke variabel utama
             showFolderBrowser = false;  // Tutup browser
-            ImGui::CloseCurrentPopup();
         }
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
 
-        ImGui::EndPopup();
+        ImGui::End();
     }
     
     // Kembalikan style rounding modal
@@ -793,6 +876,7 @@ void EditorUI::RenderFolderBrowserModal() {
             );
         }
     ImGui::End();
+    ImGui::PopStyleVar(); // [FIX] Pop WindowPadding pushed at line 888
     // Setup for Gizmo Logic
     // 5. Inspector Panel
     ImGui::Begin("Inspector");

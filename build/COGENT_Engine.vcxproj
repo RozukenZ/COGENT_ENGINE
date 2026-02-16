@@ -391,6 +391,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Types.hpp" />
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\VulkanUtils.hpp" />
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Camera.hpp" />
+    <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Logger.hpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui.cpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_draw.cpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_demo.cpp" />
