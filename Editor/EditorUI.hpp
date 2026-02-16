@@ -4,6 +4,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include <vulkan/vulkan.h>
+#include <functional> // [FIX] Required for callback
 #include <GLFW/glfw3.h>
 #include <string>
 #include <vector>
@@ -23,7 +24,7 @@ public:
               VkDevice device, uint32_t queueFamily, VkQueue queue, 
               VkRenderPass renderPass, uint32_t minImageCount);
 
-    void Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture = VK_NULL_HANDLE);
+    void Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture = VK_NULL_HANDLE, std::function<void(int)> onSpawn = nullptr, glm::vec2* outSceneSize = nullptr, glm::vec2 textureSize = {0,0});
     void Draw(VkCommandBuffer commandBuffer);
     void Cleanup(VkDevice device);
     
@@ -32,7 +33,7 @@ private:
     void ApplyModernDarkTheme();
     void RenderLoadingScreen(AppState& currentState);
     void RenderProjectHub(AppState& currentState, bool& showCursor);
-    void RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture);
+    void RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize = nullptr, glm::vec2 textureSize = {0,0});
     void RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex);
     void RenderFolderBrowserModal(); 
 

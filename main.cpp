@@ -57,6 +57,10 @@ bool firstMouse = true;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+// [FIX] Scene Viewport Size (For Aspect Ratio)
+glm::vec2 renderingViewportSize = {WIDTH, HEIGHT};
+
+
 // Cursor Variables
 bool showCursor = false;       // Status cursor saat ini
 bool lastCtrlState = false;    // Untuk toggle logic
@@ -94,17 +98,30 @@ int selectedObjectIndex = -1;
 ObjectPushConstant selectedObject{};
 
 void spawnObject(int meshID, glm::vec3 position) {
+    LOG_INFO("Attempting to Spawn Object with MeshID: " + std::to_string(meshID));
     GameObject obj;
     obj.id = (int)gameObjects.size(); // ID unik (0, 1, 2, 3...)
     
     // Simpan Tipe Mesh (0=Cube, 1=Sphere, 2=Capsule)
     // [PENTING] Ini harus disimpan di variabel khusus, bukan di obj.id!
+    // [FIX] Validate Mesh ID
+    if (meshID < 0 || meshID >= meshes.size()) {
+        LOG_ERROR("Invalid MeshID: " + std::to_string(meshID) + ". Max: " + std::to_string(meshes.size()));
+        return;
+    }
+
     obj.meshID = meshID; 
 
+    // Setup Nama & Warna
     // Setup Nama & Warna
     if (meshID == 0) obj.name = "Cube " + std::to_string(obj.id);
     else if (meshID == 1) obj.name = "Sphere " + std::to_string(obj.id);
     else if (meshID == 2) obj.name = "Capsule " + std::to_string(obj.id);
+    else if (meshID == 3) { // [FIX] Sun Logic
+        obj.name = "Sun";
+        obj.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow
+        obj.meshID = 1; // Reuse Sphere Mesh for Sun representation
+    }
     else obj.name = "Object " + std::to_string(obj.id);
     
     obj.model = glm::translate(glm::mat4(1.0f), position);
@@ -114,6 +131,7 @@ void spawnObject(int meshID, glm::vec3 position) {
     selectedObjectIndex = obj.id;
     
     std::cout << "Spawned: " << obj.name << " (Mesh ID: " << obj.meshID << ")" << std::endl;
+    LOG_INFO("Spawned Object: " + obj.name + " with MeshID: " + std::to_string(obj.meshID));
 }
 
 
@@ -229,6 +247,9 @@ private:
     VkBuffer uniformBuffer;
     VkDeviceMemory uniformBufferMemory;
     void* uniformBufferMapped;
+    
+    // [FIX] Scene Descriptor for Editor
+    VkDescriptorSet sceneDescriptorSet = VK_NULL_HANDLE;
 
     bool framebufferResized = false;
 
@@ -315,6 +336,10 @@ private:
                     findQueueFamilies(physicalDevice).graphicsFamily.value(), 
                     graphicsQueue, lightingRenderPass, 2);
 
+        // [FIX] Register G-Buffer Albedo as Texture for ImGui
+        // This allows us to see the "Game View" (Albedo Only for now) in the Editor
+        sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, gBuffer.getAlbedoView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
         // --- 8. INIT RAY TRACER ---
         std::cout << "Initializing Ray Tracer..." << std::endl;
         rayTracer.init(device, physicalDevice, commandPool, graphicsQueue, swapchainExtent); // Reuse Graphics Queue for simplicity
@@ -369,21 +394,8 @@ private:
                 }
             }
 
-            //SPAWN OBJECT CONTEXT MENU
-            if (showCursor && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered()) {
-                ImGui::OpenPopup("SpawnContext");
-            }
+            // [REMOVED] Old Spawn Logic (Moved to EditorUI.cpp)
 
-            if (ImGui::BeginPopup("SpawnContext")) {
-                ImGui::Text("Add Object");
-                ImGui::Separator();
-                
-                if (ImGui::MenuItem("Cube"))    spawnObject(0, glm::vec3(0, 0, 0));
-                if (ImGui::MenuItem("Sphere"))  spawnObject(1, glm::vec3(0, 0, 0));
-                if (ImGui::MenuItem("Capsule")) spawnObject(2, glm::vec3(0, 0, 0));
-                
-                ImGui::EndPopup();
-            }
 
             // Update UI Logic
             // This is important! For ImGui to work properly
@@ -397,13 +409,21 @@ private:
             // Dont forget to pass currentState by reference!
             // so that EditorUI can modify it when needed
             // Example: currentState = AppState::EDITOR;
-            editorUI.Update(currentState, showCursor, deltaTime, mainCamera, selectedObject, gameObjects, selectedObjectIndex, rayTracer.getOutputDescriptorSet());
+            // [FIX] Pass Spawn Callback to Editor
+            // This ensures spawn happens safely within the main loop
+            editorUI.Update(currentState, showCursor, deltaTime, mainCamera, selectedObject, gameObjects, selectedObjectIndex, sceneDescriptorSet, [&](int meshID) {
+                // Spawn at Center (or Camera position + forward)
+                spawnObject(meshID, glm::vec3(0, 0, 0)); 
+            }, &renderingViewportSize, { (float)swapchainExtent.width, (float)swapchainExtent.height }); // [FIX] Pass Texture Resolution
+
 
             // Sync selectedObject if Changed in UI
+            // Sync selectedObject if Changed in UI
             if (currentState == AppState::EDITOR && selectedObjectIndex != -1) {
-                // Jika user ganti object via Hierarchy, kita update selectedObject
-                // (Optional: Bisa juga kita pake pointer langsung)
-                // selectedObject = gameObjects[selectedObjectIndex].getPushConstant(); 
+                // [FIX] Update Game Object from UI (Inspector)
+                // This ensures color/transform changes in Inspector are saved to the actual object
+                gameObjects[selectedObjectIndex].model = selectedObject.model;
+                gameObjects[selectedObjectIndex].color = selectedObject.color;
             }
 
             // 4. Update Uniform Buffer
@@ -438,9 +458,10 @@ private:
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapchainExtent;
 
-        // Clear Screen (Black out G-Buffer before drawing)
+        // Clear Screen (G-Buffer)
         std::array<VkClearValue, 4> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Albedo
+        // [FIX] Sky Blue Background for Editor View (Albedo Attachment)
+        clearValues[0].color = {{0.53f, 0.81f, 0.92f, 1.0f}}; 
         clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Normal
         clearValues[2].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Velocity
         clearValues[3].depthStencil = {1.0f, 0};           // Depth
@@ -580,14 +601,28 @@ private:
 
             // Viewport Fullscreen
             VkViewport viewportFullscreen{};
-            viewportFullscreen.width = (float)swapchainExtent.width;
-            viewportFullscreen.height = (float)swapchainExtent.height;
+            
+            // [FIX] Viewport = Rendering Panel Size (Not Window Size)
+            // This renders the scene into a smaller subset of the G-Buffer
+            // matching exactly what we display in ImGui. No Distortion!
+            float vpWidth = renderingViewportSize.x;
+            float vpHeight = renderingViewportSize.y;
+            
+            // Safety: Constraint to buffer size
+            if(vpWidth > swapchainExtent.width) vpWidth = (float)swapchainExtent.width;
+            if(vpHeight > swapchainExtent.height) vpHeight = (float)swapchainExtent.height;
+            if(vpWidth < 1.0f) vpWidth = 1.0f; // Prevent 0 size crash
+            if(vpHeight < 1.0f) vpHeight = 1.0f;
+
+            viewportFullscreen.width = vpWidth;
+            viewportFullscreen.height = vpHeight;
             viewportFullscreen.minDepth = 0.0f;
             viewportFullscreen.maxDepth = 1.0f;
             vkCmdSetViewport(commandBuffer, 0, 1, &viewportFullscreen);
 
             VkRect2D scissorFullscreen{};
-            scissorFullscreen.extent = swapchainExtent;
+            scissorFullscreen.offset = {0, 0};
+            scissorFullscreen.extent = {(uint32_t)vpWidth, (uint32_t)vpHeight};
             vkCmdSetScissor(commandBuffer, 0, 1, &scissorFullscreen);
 
             // Bind Pipeline Lighting (Shader Lighting)
@@ -1036,19 +1071,40 @@ private:
     }
 
     void recreateSwapchain() {
+        int width = 0, height = 0;
+        glfwGetFramebufferSize(window, &width, &height);
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(window, &width, &height);
+            glfwWaitEvents();
+        }
+
         vkDeviceWaitIdle(device);
-        // Hancurkan yang lama
+
+        // 1. Destroy Old Resources
+        for (auto framebuffer : swapchainFramebuffers) {
+            vkDestroyFramebuffer(device, framebuffer, nullptr);
+        }
         for (auto imageView : swapchainImageViews) {
             vkDestroyImageView(device, imageView, nullptr);
         }
         vkDestroySwapchainKHR(device, swapchain, nullptr);
+        
+        // Destroy G-Buffer Resources (Resize)
+        gBuffer.cleanup(device);
 
-        // Buat baru
+        // 2. Recreate Resources
         createSwapchain();
         createSwapchainImageViews();
+        createSwapchainFramebuffers(); // [FIX] Recreate Framebuffers
+
+        // [FIX] Resize G-Buffer to match new Window Size
+        gBuffer.init(device, physicalDevice, swapchainExtent.width, swapchainExtent.height);
+
+        // [FIX] Update Editor Scene Texture
+        // We need a fresh descriptor set because the old one points to a destroyed Image View
+        sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, gBuffer.getAlbedoView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         
-        // Note: Karena kita pakai Deferred G-Buffer yang ukurannya fix, 
-        // kita mungkin perlu resize G-Buffer juga di sini jika mau responsif.
+        // Note: sceneDescriptorSet in EditorUI::Update will use this new value automatically
     }
 
     void createLightingRenderPass() {
@@ -1396,7 +1452,13 @@ private:
         // FOV 45 degree, dynamic aspect ratio from swapchain (Responsive UI)
         // Near plane 0.1, Far plane 1000.0f (Increased for better view distance)
         // Important: Flip Y-coordinate (ubo.proj[1][1] *= -1) because Vulkan is different from OpenGL
+        
+        // [FIX] Use Rendering Viewport Aspect Ratio (Fix Distortion)
         float aspectRatio = (float)swapchainExtent.width / (float)swapchainExtent.height;
+        if (renderingViewportSize.x > 0 && renderingViewportSize.y > 0) {
+            aspectRatio = renderingViewportSize.x / renderingViewportSize.y;
+        }
+
         ubo.proj = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 1000.0f);
         ubo.proj[1][1] *= -1; 
 

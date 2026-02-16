@@ -69,8 +69,8 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
     ImGui_ImplVulkan_Init(&init_info);
 }
 
-// [FIX] Parameter fungsi ditambahkan: camera & selectedObject & gameObjects & selectedIndex & sceneTexture
-void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture) {
+// [FIX] Parameter fungsi ditambahkan: onSpawn callback, outSceneSize, textureSize
+void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize, glm::vec2 textureSize) {
     
     // 1. Setup Frame ImGui
     ImGui_ImplVulkan_NewFrame();
@@ -107,7 +107,7 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
     else if (currentState == AppState::EDITOR) {
         // [FIX] Passing data Camera & Object ke Workspace
         // Agar Gizmo dan Inspector bisa bekerja!
-        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject, gameObjects, selectedIndex, sceneTexture);
+        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject, gameObjects, selectedIndex, sceneTexture, onSpawn, outSceneSize, textureSize);
     }
 
     // 4. Render Draw Data
@@ -798,7 +798,7 @@ void EditorUI::RenderFolderBrowserModal() {
 //                          MODERN EDITOR WORKSPACE
 // ==================================================================================
 
-   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture) {
+   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize, glm::vec2 textureSize) {
     
     // 1. Setup DockSpace
     ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
@@ -843,12 +843,34 @@ void EditorUI::RenderFolderBrowserModal() {
     // 4. Scene View (The Central Node)
     // We render the texture here!
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0)); // No padding for image
-    ImGui::Begin("Scene View");
+    ImGui::Begin("Scene View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
         // Get Window Size for Aspect Ratio
         ImVec2 windowSize = ImGui::GetContentRegionAvail();
         
+        // [FIX] Return Scene Size for Aspect Ratio Correction
+        if (outSceneSize) {
+            outSceneSize->x = windowSize.x;
+            outSceneSize->y = windowSize.y;
+        }
+
+
+
         if (sceneTexture) {
-            ImGui::Image((ImTextureID)sceneTexture, windowSize);
+            // [FIX] UV Calculation for Dynamic Viewport
+            // We only display the portion of the G-Buffer that we actually rendered to (the top-left corner)
+            ImVec2 uv0 = ImVec2(0, 0);
+            ImVec2 uv1 = ImVec2(1, 1);
+            
+            if (textureSize.x > 0 && textureSize.y > 0) {
+                uv1.x = windowSize.x / textureSize.x;
+                uv1.y = windowSize.y / textureSize.y;
+                
+                // Safety Clamp (Don't sample outside texture)
+                if (uv1.x > 1.0f) uv1.x = 1.0f;
+                if (uv1.y > 1.0f) uv1.y = 1.0f;
+            }
+
+            ImGui::Image((ImTextureID)sceneTexture, windowSize, uv0, uv1);
         } else {
              ImGui::TextDisabled("No Scene Texture Available");
         }
@@ -875,6 +897,26 @@ void EditorUI::RenderFolderBrowserModal() {
                 glm::value_ptr(selectedObject.model)
             );
         }
+
+        // [FIX] Spawn Context Menu (Inside Scene View)
+        // Now safe because we are inside NewFrame() and inside a Window
+        if (showCursor && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
+            ImGui::OpenPopup("SpawnContext");
+        }
+
+        if (ImGui::BeginPopup("SpawnContext")) {
+            ImGui::Text("Add Object");
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Cube"))    { if(onSpawn) onSpawn(0); }
+            if (ImGui::MenuItem("Sphere"))  { if(onSpawn) onSpawn(1); }
+            if (ImGui::MenuItem("Capsule")) { if(onSpawn) onSpawn(2); }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Sun (Light)")) { if(onSpawn) onSpawn(3); } // [FIX] Add Sun
+            
+            ImGui::EndPopup();
+        }
+
     ImGui::End();
     ImGui::PopStyleVar(); // [FIX] Pop WindowPadding pushed at line 888
     // Setup for Gizmo Logic
