@@ -1,37 +1,41 @@
 #version 450
 
-layout (location = 0) out vec4 outColor;
+layout(location = 0) in vec2 inUV;
+layout(location = 0) out vec4 outColor;
 
-// INPUT: Kita membaca hasil dari G-Buffer (Geometry Pass)
-// Set 0, Binding 0: Albedo Texture
-// Set 0, Binding 1: Normal Texture
-// Set 0, Binding 2: Depth/Position (Nanti)
-layout (set = 0, binding = 0) uniform sampler2D samplerAlbedo;
-layout (set = 0, binding = 1) uniform sampler2D samplerNormal;
+layout(binding = 0) uniform sampler2D samplerPosition;
+layout(binding = 1) uniform sampler2D samplerNormal;
+layout(binding = 2) uniform sampler2D samplerAlbedo;
+
+layout(binding = 3) uniform LightUBO {
+    vec4 lightPos;
+    vec4 lightColor;
+    vec4 viewPos;
+} ubo;
 
 void main() {
-    // Cari tahu koordinat layar saat ini (0.0 sampai 1.0)
-    vec2 uv = gl_FragCoord.xy / vec2(1280.0, 720.0); // Hardcode resolusi dulu, nanti pakai Uniform
-
-    // 1. BACA DATA DARI G-BUFFER
-    vec3 albedo = texture(samplerAlbedo, uv).rgb;
-    vec3 normal = texture(samplerNormal, uv).rgb;
-
-    // 2. DEFINISI LAMPU (Directional Light - Matahari)
-    // Nanti kita kirim ini dari CPU, sekarang hardcode dulu biar jalan
-    vec3 lightDir = normalize(vec3(0.5, 1.0, 0.5)); // Arah datang sinar
-    vec3 lightColor = vec3(1.0, 1.0, 1.0); // Warna putih
-    float ambientStrength = 0.1;
-
-    // 3. HITUNG PENCAHAYAAN (Phong Shading Sederhana)
-    // Ambient (Cahaya dasar agar tidak gelap gulita)
-    vec3 ambient = ambientStrength * albedo;
-
-    // Diffuse (Cahaya yang mengenai permukaan)
-    // Hitung sudut antara arah lampu dan arah normal permukaan (Dot Product)
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor * albedo;
-
-    // 4. HASIL AKHIR
-    outColor = vec4(ambient + diffuse, 1.0);
+    // 1. Retrieve data from G-Buffer
+    vec3 FragPos = texture(samplerPosition, inUV).rgb;
+    vec3 Normal = texture(samplerNormal, inUV).rgb;
+    vec3 Albedo = texture(samplerAlbedo, inUV).rgb;
+    
+    // 2. Calculate Lighting (Simple Phong/PBR)
+    vec3 lightDir = normalize(ubo.lightPos.xyz - FragPos);
+    vec3 viewDir = normalize(ubo.viewPos.xyz - FragPos);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    
+    // Diffuse
+    float diff = max(dot(Normal, lightDir), 0.0);
+    vec3 diffuse = diff * ubo.lightColor.rgb;
+    
+    // Specular
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), 32.0); // Hardcoded shiness
+    vec3 specular = vec3(0.5) * spec; // Specular intensity
+    
+    // Ambient
+    vec3 ambient = vec3(0.1) * Albedo; // Simple ambient
+    
+    vec3 lighting = (ambient + diffuse + specular) * Albedo;
+    
+    outColor = vec4(lighting, 1.0);
 }

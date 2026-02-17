@@ -6,32 +6,26 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Vendor/stb_image.h"
 
+// Note: We need to include GraphicsDevice for the override
+#include "../Core/Graphics/GraphicsDevice.hpp"
+
 void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool commandPool, VkQueue graphicsQueue, const std::string& filepath) {
-    int texWidth, texHeight, texChannels;
+    this->path = filepath;
+    loadCPU();
     
-    // 1. Load Pixel Data dari File (CPU)
-    stbi_uc* pixels = stbi_load(filepath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    // We can't easily call uploadGPU(GraphicsDevice) here because we have individual Vk handles.
+    // But legacy load is synchronous.
+    // Let's just replicate the logic or create a temporary GraphicsDevice wrapper is too complex.
+    // We will stick to the existing implementation for legacy load but redirect it where possible.
     
-    bool isFallback = false;
-    if (!pixels) {
-        std::cerr << "WARNING: Gagal memuat texture: " << filepath << ". Menggunakan fallback texture (Putih 1x1)." << std::endl;
-        texWidth = 1;
-        texHeight = 1;
-        texChannels = 4;
-        pixels = (stbi_uc*)malloc(4 * sizeof(stbi_uc));
-        pixels[0] = 255; pixels[1] = 255; pixels[2] = 255; pixels[3] = 255;
-        isFallback = true;
-    }
+    // Actually, for legacy load, let's just use the existing logic but using pixelData member.
+    
+    // Check if loadCPU failed/succeeded
+    if (pixelData.empty()) return;
 
-    // ... (pixels loaded or fallback created)
+    // Upload Logic (Inline for now to support legacy call style)
+    VkDeviceSize imageSize = width * height * 4;
 
-    VkDeviceSize imageSize = texWidth * texHeight * 4; // RGBA = 4 bytes
-    width = static_cast<uint32_t>(texWidth);
-    height = static_cast<uint32_t>(texHeight);
-
-    std::cout << "Texture::load -> imageSize: " << imageSize << ", width: " << width << ", height: " << height << std::endl;
-
-    // 2. Buat Staging Buffer (Transfer CPU -> GPU)
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     
@@ -39,9 +33,7 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     bufferInfo.size = imageSize;
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create staging buffer!");
-    }
+    vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
 
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
@@ -49,43 +41,27 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(physDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate staging buffer memory!");
-    }
+    vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
     vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
 
-    // Copy data pixels ke Staging Buffer
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    memcpy(data, pixelData.data(), static_cast<size_t>(imageSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
-    if (isFallback) {
-        free(pixels);
-    } else {
-        stbi_image_free(pixels); 
-    }
+    // Free CPU data after upload (optional, keep if we want to re-upload)
+    // pixelData.clear(); 
+    // pixelData.shrink_to_fit();
 
-    // 3. Buat Image Object di GPU (VRAM)
-    std::cout << "Texture::load -> Creating Image..." << std::endl;
     createImage(device, physDevice, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
-    // 4. Transisi Layout & Copy Buffer to Image
-    std::cout << "Texture::load -> Transition Layout (Undefined -> TransferDst)..." << std::endl;
     transitionImageLayout(device, commandPool, graphicsQueue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    
-    std::cout << "Texture::load -> Copy Buffer to Image..." << std::endl;
     copyBufferToImage(device, commandPool, graphicsQueue, stagingBuffer, textureImage, width, height);
-    
-    std::cout << "Texture::load -> Transition Layout (TransferDst -> ShaderReadOnly)..." << std::endl;
     transitionImageLayout(device, commandPool, graphicsQueue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    // Bersihkan Staging Buffer
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 
-    // 5. Create Image View
-    std::cout << "Texture::load -> Create Image View..." << std::endl;
     VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     viewInfo.image = textureImage;
     viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -95,21 +71,16 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     viewInfo.subresourceRange.levelCount = 1;
     viewInfo.subresourceRange.baseArrayLayer = 0;
     viewInfo.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(device, &viewInfo, nullptr, &textureImageView) != VK_SUCCESS) {
-         throw std::runtime_error("failed to create image view!");
-    }
+    vkCreateImageView(device, &viewInfo, nullptr, &textureImageView);
 
-    // 6. Create Sampler
-    std::cout << "Texture::load -> Create Sampler..." << std::endl;
     VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_TRUE; // Aktifkan Anisotropy biar tekstur miring tidak buram
+    samplerInfo.anisotropyEnable = VK_TRUE; 
     
-    // Cek limit GPU
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(physDevice, &properties);
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
@@ -120,18 +91,153 @@ void Texture::load(VkDevice device, VkPhysicalDevice physDevice, VkCommandPool c
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create sampler!");
+    vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler);
+
+    state = Cogent::Resources::StreamingState::RESIDENT;
+}
+
+void Texture::loadCPU() {
+    state = Cogent::Resources::StreamingState::LOADING;
+    
+    int texWidth, texHeight;
+    stbi_uc* pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    
+    isFallback = false;
+    if (!pixels) {
+        std::cerr << "WARNING: Gagal memuat texture: " << path << ". Menggunakan fallback." << std::endl;
+        texWidth = 1; texHeight = 1; texChannels = 4;
+        pixelData.resize(4);
+        pixelData[0] = 255; pixelData[1] = 255; pixelData[2] = 255; pixelData[3] = 255;
+        isFallback = true;
+    } else {
+        width = static_cast<uint32_t>(texWidth);
+        height = static_cast<uint32_t>(texHeight);
+        VkDeviceSize size = width * height * 4;
+        pixelData.resize(size);
+        memcpy(pixelData.data(), pixels, size);
+        stbi_image_free(pixels);
     }
     
-    std::cout << "Texture::load -> Done!" << std::endl;
+    state = Cogent::Resources::StreamingState::LOADED_CPU;
+}
+
+void Texture::uploadGPU(Cogent::Core::Graphics::GraphicsDevice& device) {
+    if (pixelData.empty()) return;
+
+    state = Cogent::Resources::StreamingState::UPLOADING;
+
+    VkDevice vkDevice = device.getDevice();
+    VkPhysicalDevice physDevice = device.getPhysicalDevice();
+    VkCommandPool cmdPool = device.getCommandPool();
+    VkQueue queue = device.getGraphicsQueue(); // Use graphics queue for now
+
+    // Re-use logic from load() but using public getters
+    // Copy-paste logic from load() above essentially
+    
+    VkDeviceSize imageSize = width * height * 4;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    
+    VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    bufferInfo.size = imageSize;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vkCreateBuffer(vkDevice, &bufferInfo, nullptr, &stagingBuffer);
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(vkDevice, stagingBuffer, &memRequirements);
+    VkMemoryAllocateInfo allocInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(physDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    
+    vkAllocateMemory(vkDevice, &allocInfo, nullptr, &stagingBufferMemory);
+    vkBindBufferMemory(vkDevice, stagingBuffer, stagingBufferMemory, 0);
+
+    void* data;
+    vkMapMemory(vkDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, pixelData.data(), static_cast<size_t>(imageSize));
+    vkUnmapMemory(vkDevice, stagingBufferMemory);
+
+    // Free CPU data
+    pixelData.clear();
+    pixelData.shrink_to_fit();
+
+    createImage(vkDevice, physDevice, width, height, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+
+    transitionImageLayout(vkDevice, cmdPool, queue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    copyBufferToImage(vkDevice, cmdPool, queue, stagingBuffer, textureImage, width, height);
+    transitionImageLayout(vkDevice, cmdPool, queue, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vkDestroyBuffer(vkDevice, stagingBuffer, nullptr);
+    vkFreeMemory(vkDevice, stagingBufferMemory, nullptr);
+
+    VkImageViewCreateInfo viewInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    viewInfo.image = textureImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+    vkCreateImageView(vkDevice, &viewInfo, nullptr, &textureImageView);
+
+    VkSamplerCreateInfo samplerInfo{VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE; 
+    
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(physDevice, &properties);
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    vkCreateSampler(vkDevice, &samplerInfo, nullptr, &textureSampler);
+
+    state = Cogent::Resources::StreamingState::RESIDENT;
+}
+
+void Texture::unload() {
+     // We don't have device handle stored in Texture to destroy resources...
+     // cleanup(device) takes a device handle. 
+     // This is a flaw in the current Texture design for RAII/Automatic unloading.
+     // For now, assume manual cleanup or we need to store device handle.
+     
+     // Since this method override must match base class with no arguments, 
+     // we can't easily implement full unload without storing VkDevice.
+     
+     if (textureImage != VK_NULL_HANDLE) {
+         std::cerr << "WARNING: Texture::unload() called but cannot destroy Vulkan resources (Missing VkDevice handle). Use cleanup(device) instead." << std::endl;
+         // In a real engine, Texture would hold a pointer to Device or RenderContext.
+         // For now, we clear CPU data.
+     }
+     
+     pixelData.clear();
+     pixelData.shrink_to_fit();
+     state = Cogent::Resources::StreamingState::UNLOADED;
 }
 
 void Texture::cleanup(VkDevice device) {
-    vkDestroySampler(device, textureSampler, nullptr);
-    vkDestroyImageView(device, textureImageView, nullptr);
-    vkDestroyImage(device, textureImage, nullptr);
-    vkFreeMemory(device, textureImageMemory, nullptr);
+    if (textureSampler != VK_NULL_HANDLE) vkDestroySampler(device, textureSampler, nullptr);
+    if (textureImageView != VK_NULL_HANDLE) vkDestroyImageView(device, textureImageView, nullptr);
+    if (textureImage != VK_NULL_HANDLE) vkDestroyImage(device, textureImage, nullptr);
+    if (textureImageMemory != VK_NULL_HANDLE) vkFreeMemory(device, textureImageMemory, nullptr);
+    
+    textureSampler = VK_NULL_HANDLE;
+    textureImageView = VK_NULL_HANDLE;
+    textureImage = VK_NULL_HANDLE;
+    textureImageMemory = VK_NULL_HANDLE;
+    
+    state = Cogent::Resources::StreamingState::UNLOADED;
 }
 
 // --- HELPER FUNCTIONS ---

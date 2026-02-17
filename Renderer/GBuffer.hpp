@@ -2,42 +2,65 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <array>
+#include "../Core/Graphics/GraphicsDevice.hpp"
 
 class GBuffer {
 public:
-    struct Attachment {
+    struct FramebufferAttachment {
         VkImage image;
-        VkDeviceMemory memory;
+        VkDeviceMemory mem;
         VkImageView view;
         VkFormat format;
     };
 
-    // Index attachment untuk shader layout(location = X)
-    enum AttachmentIndex {
-        ALBEDO = 0,   // Warna & Roughness
-        NORMAL = 1,   // World Space Normals
-        VELOCITY = 2, // Pergerakan pixel (Penting untuk TAA)
-        DEPTH = 3,    // Depth information
-        COUNT
-    };
+    GBuffer(GraphicsDevice& device, uint32_t width, uint32_t height);
+    ~GBuffer();
 
-    // Initialize G-Buffer
-    void init(VkDevice device, VkPhysicalDevice physDevice, uint32_t width, uint32_t height);
-    void cleanup(VkDevice device);
-    // Getters
-    VkRenderPass getRenderPass() { return renderPass; }
-    VkFramebuffer getFramebuffer() { return framebuffer; }
-    VkImage getAlbedoImage() { return attachments[0].image; }
-    VkImage getNormalImage() { return attachments[1].image; }
-    VkImageView getAlbedoView() { return attachments[0].view; }
-    VkImageView getNormalView() { return attachments[1].view; }
+    void resize(uint32_t width, uint32_t height);
+
+    VkRenderPass getRenderPass() const { return renderPass; }
+    VkFramebuffer getFramebuffer() const { return framebuffer; }
+    
+    // G-Buffer Attachment Accessors
+    VkImageView getPositionView() const { return position.view; }
+    VkImageView getNormalView() const { return normal.view; }
+    VkImageView getAlbedoView() const { return albedo.view; }
+    
+    // Low-level access for barriers
+    VkImage getPositionImage() const { return position.image; }
+    VkImage getNormalImage() const { return normal.image; }
+    VkImage getAlbedoImage() const { return albedo.image; }
+    
+    // Get specific attachment view (0=Pos, 1=Norm, 2=Albedo, 3=Depth)
+    VkImageView getImageView(int index) const {
+        if (index >= 0 && index < attachments.size()) {
+            return attachments[index].view;
+        }
+        return VK_NULL_HANDLE;
+    }
+    
+    // Get Sampler
+    VkSampler getSampler() const { return sampler; } // Added Getter
+
+    VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
+    VkDescriptorSet getDescriptorSet() const { return descriptorSet; }
 
 private:
+    void init();
+    void cleanup();
+    void createAttachment(VkFormat format, VkImageUsageFlags usage, FramebufferAttachment& attachment);
+
+    GraphicsDevice& device;
+    uint32_t width, height;
+
     VkRenderPass renderPass;
     VkFramebuffer framebuffer;
-    std::vector<Attachment> attachments;
 
-    // Helper untuk membuat attachment secara modular
-    void createAttachment(VkDevice device, VkPhysicalDevice physDevice, uint32_t width, uint32_t height, 
-                          VkFormat format, VkImageUsageFlags usage, Attachment& attachment);
+    // Attachments: Position, Normal, Albedo
+    FramebufferAttachment position, normal, albedo, depth;
+    VkSampler sampler; // Single sampler for all attachments
+
+    VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSet;
 };

@@ -40,6 +40,20 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RayTracing/RayTracer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Engine/CogentEngine.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics/GraphicsDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics/Swapchain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Diagnostics/GpuProfiler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Graph/RenderGraph.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/DeferredLightingPass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ShadowPass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ShadowPass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ScreenSpaceShadows.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Visibility/VisibilitySystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/InstanceBuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ANSR/ANSRPass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/PostProcess/AutoExposurePass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/VulkanUtils.cpp
 )
 
 # 3. Create Executable
@@ -53,7 +67,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${TINYOBJ_INCLUDE_DIR}"
     "${GLM_INCLUDE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/Core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics"
     "${CMAKE_CURRENT_SOURCE_DIR}/Renderer"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Graph"
     "${CMAKE_CURRENT_SOURCE_DIR}/Resources"
     "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui"
     "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo"
@@ -62,6 +78,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Scene
     ${CMAKE_CURRENT_SOURCE_DIR}/Geometry
     "${CMAKE_CURRENT_SOURCE_DIR}/RayTracing"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Engine"
 )
 
 # 5. LINK LIBRARIES

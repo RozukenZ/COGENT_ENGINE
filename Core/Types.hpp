@@ -123,6 +123,12 @@ struct GameObject {
     glm::vec4 color;        // Color for editor visualization
     int id;                 // Unique ID for picking
     int meshID;             // [FIX] Added meshID to identify mesh type (0=Cube, 1=Sphere, etc.)
+    
+    // Bounding Volume (World Space) - Updated when model matrix changes
+    // Using a simple struct or including Frustum header if safely forward declared.
+    // To avoid header cycles, we define struct here or use glm::vec3 min/max directly.
+    glm::vec3 aabbMin = glm::vec3(-1.0f);
+    glm::vec3 aabbMax = glm::vec3(1.0f);
 
     ObjectPushConstant getPushConstant() const {
         ObjectPushConstant pc{};
