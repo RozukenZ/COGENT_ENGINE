@@ -1,6 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include <stdexcept>
+#include <vector>
+#include <string>
 
 // Helper Shared: Mencari tipe memori GPU yang cocok
 inline uint32_t findMemoryType(VkPhysicalDevice physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
@@ -23,9 +25,4 @@ namespace VulkanUtils {
     VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 
     void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask);
-}
-
-
-
-    throw std::runtime_error("Gagal menemukan tipe memori yang cocok!");
 }

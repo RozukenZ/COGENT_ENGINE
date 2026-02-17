@@ -29,19 +29,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 60,
+				"line" : 61,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 85,
+				"line" : 86,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 64,
+				"line" : 65,
 				"parent" : 0
 			}
 		]
@@ -152,7 +152,7 @@
 				4,
 				6,
 				7,
-				12,
+				8,
 				13,
 				14,
 				15,
@@ -162,7 +162,7 @@
 				19,
 				20,
 				21,
-				23,
+				22,
 				24,
 				25,
 				26,
@@ -175,7 +175,8 @@
 				33,
 				34,
 				35,
-				36
+				36,
+				37
 			]
 		}
 	],
@@ -249,7 +250,7 @@
 				4,
 				6,
 				7,
-				12,
+				8,
 				13,
 				14,
 				15,
@@ -259,7 +260,7 @@
 				19,
 				20,
 				21,
-				23,
+				22,
 				24,
 				25,
 				26,
@@ -272,7 +273,8 @@
 				33,
 				34,
 				35,
-				36
+				36,
+				37
 			]
 		},
 		{
@@ -281,11 +283,11 @@
 			[
 				3,
 				5,
-				8,
 				9,
 				10,
 				11,
-				22
+				12,
+				23
 			]
 		}
 	],
@@ -335,6 +337,12 @@
 			"backtrace" : 1,
 			"compileGroupIndex" : 0,
 			"path" : "Resources/Texture.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "Resources/Streaming/Streamer.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{

@@ -174,6 +174,7 @@ namespace Cogent::Renderer {
     }
 
     void ANSRPass::updateDescriptorSets(VkImageView inputColor, VkImageView inputMotion, VkImageView inputDepth) {
+         VkDescriptorImageInfo colorInfo{};
          colorInfo.imageView = inputColor; 
          colorInfo.sampler = VK_NULL_HANDLE; // Immutable or separate sampler if shader needs it
 

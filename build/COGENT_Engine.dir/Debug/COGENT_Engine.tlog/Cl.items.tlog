@@ -4,6 +4,7 @@ D:\MyProject\COGENT_ENGINE\Renderer\RenderPipeline.cpp;D:\MyProject\COGENT_ENGIN
 D:\MyProject\COGENT_ENGINE\Renderer\LightingPass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\LightingPass.obj
 D:\MyProject\COGENT_ENGINE\Resources\Model.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Model.obj
 D:\MyProject\COGENT_ENGINE\Resources\Texture.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Texture.obj
+D:\MyProject\COGENT_ENGINE\Resources\Streaming\Streamer.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Streamer.obj
 D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui.obj
 D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_draw.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_draw.obj
 D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_demo.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_demo.obj
@@ -15,3 +16,16 @@ D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp;D:\MyProject\COGENT_ENGINE\build\
 D:\MyProject\COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ImGuizmo.obj
 D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\PrimitiveMesh.obj
 D:\MyProject\COGENT_ENGINE\RayTracing\RayTracer.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\RayTracer.obj
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\CogentEngine.obj
+D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\GraphicsDevice.obj
+D:\MyProject\COGENT_ENGINE\Core\Graphics\Swapchain.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\Swapchain.obj
+D:\MyProject\COGENT_ENGINE\Core\Diagnostics\GpuProfiler.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\GpuProfiler.obj
+D:\MyProject\COGENT_ENGINE\Renderer\Graph\RenderGraph.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\RenderGraph.obj
+D:\MyProject\COGENT_ENGINE\Renderer\DeferredLightingPass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\DeferredLightingPass.obj
+D:\MyProject\COGENT_ENGINE\Renderer\ShadowPass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ShadowPass.obj
+D:\MyProject\COGENT_ENGINE\Renderer\ScreenSpaceShadows.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ScreenSpaceShadows.obj
+D:\MyProject\COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\VisibilitySystem.obj
+D:\MyProject\COGENT_ENGINE\Renderer\InstanceBuffer.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\InstanceBuffer.obj
+D:\MyProject\COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ANSRPass.obj
+D:\MyProject\COGENT_ENGINE\Renderer\PostProcess\AutoExposurePass.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\AutoExposurePass.obj
+D:\MyProject\COGENT_ENGINE\Core\VulkanUtils.cpp;D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.dir\Debug\VulkanUtils.obj

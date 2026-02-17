@@ -1,0 +1,39 @@
+[2026-02-17 10:17:14] [INFO] COGENT ENGINE STARTED
+[2026-02-17 10:17:14] [INFO] Bootstrapping System...
+[2026-02-17 10:17:14] [INFO] Bootstrapping System...
+[2026-02-17 10:17:15] [INFO] Job System Initialized
+[2026-02-17 10:17:15] [INFO] Checking GPU: Intel(R) UHD Graphics
+[2026-02-17 10:17:15] [INFO]   - Suitable!
+[2026-02-17 10:17:15] [INFO] Found GPU: Intel(R) UHD Graphics (Score: 16384)
+[2026-02-17 10:17:15] [INFO] Checking GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:17:15] [INFO]   - Suitable!
+[2026-02-17 10:17:15] [INFO] Found GPU: NVIDIA GeForce RTX 3050 Laptop GPU (Score: 33768)
+[2026-02-17 10:17:15] [INFO] RHI: Selected Best GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:17:16] [INFO] Initializing G-Buffer...
+[2026-02-17 10:17:16] [INFO] Loading Default White Texture...
+build\Debug\COGENT_Eng
+ine.exe : WARNING: 
+Gagal memuat texture: 
+textures/white.png. 
+Menggunakan fallback.
+At line:1 char:1
++ build\Debug\COGENT_E
+ngine.exe > 
+run_v26_cwd.log 2>&1
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (WARNING: G   
+ agal ...nakan fal    
+lback.:String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+[2026-02-17 10:17:28] 
+[FATAL] CRASH 
+DETECTED! Exception 
+Code: 0xc0000005

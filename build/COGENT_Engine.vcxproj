@@ -388,6 +388,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Renderer\LightingPass.hpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Model.cpp" />
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Texture.cpp" />
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Streaming\Streamer.cpp" />
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Types.hpp" />
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\VulkanUtils.hpp" />
     <ClInclude Include="D:\MyProject\COGENT_ENGINE\Core\Camera.hpp" />

@@ -21,7 +21,7 @@
 // Include modul buatan kita
 #include "../RayTracing/RayTracer.hpp"
 #include "../Renderer/GBuffer.hpp"
-#include "../Renderer/Model.hpp"
+#include "../Resources/Model.hpp"
 #include "../Renderer/RenderPipeline.hpp"
 #include "../Core/Types.hpp"
 #include "../Core/VulkanUtils.hpp"
@@ -41,18 +41,11 @@
 #include "../Renderer/DeferredLightingPass.hpp"
 #include "../Renderer/ScreenSpaceShadows.hpp"
 
-// Struktur untuk Queue Families (Graphics & Compute)
-struct QueueFamilyIndices {
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> computeFamily; 
-
-    bool isComplete() {
-        return graphicsFamily.has_value() && computeFamily.has_value();
-    }
-};
+// QueueFamilyIndices struct is defined in GraphicsDevice.hpp
 
 class CogentEngine {
 public:
+    CogentEngine();
     void run();
 
 private:
@@ -70,12 +63,11 @@ private:
     void createCommandBuffer();
     void createSyncObjects();
     void createSwapchain();
-    void createSwapchain();
     void createSwapchainImageViews();
     void recreateSwapchain();
     
     bool isDeviceSuitable(VkPhysicalDevice device);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    // QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device); // Removed, use GraphicsDevice::findQueueFamilies
     
     // Resource Helpers
     void createUniformBuffer();
@@ -107,8 +99,11 @@ private:
     
     GLFWwindow* window;
     
-    // Vulkan Handles
-    VkInstance instance;
+    // Subsystems
+    GraphicsDevice graphicsDevice; // Main Graphics Device
+
+    // Vulkan Handles (Legacy/Direct Access) - Consider removing if GraphicsDevice covers all
+    VkInstance instance = VK_NULL_HANDLE;
     VkSurfaceKHR surface;
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
@@ -135,7 +130,8 @@ private:
     Model myModel;
     RenderPipeline gBufferPipeline;
     RayTracer rayTracer;
-    LightingPass lightingPass;
+    std::unique_ptr<DeferredLightingPass> deferredLightingPass;
+    std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
     VkRenderPass lightingRenderPass;
     
     // Resources
@@ -166,14 +162,14 @@ private:
     
     // Systems
     std::unique_ptr<Cogent::Memory::LinearAllocator> frameAllocator;
-    std::unique_ptr<Cogent::Renderer::RenderGraph> renderGraph;
+    std::unique_ptr<RenderGraph> renderGraph; // Fixed namespace
     std::unique_ptr<Cogent::Renderer::VisibilitySystem> visibilitySystem;
     std::unique_ptr<Cogent::Resources::Streamer> streamer;
     
     // Scene Data
     std::vector<GameObject> gameObjects;
     std::vector<const GameObject*> visibleObjects; // Results from culling
-    Camera mainCamera;
+    // Camera mainCamera; // Removed private duplicate
     
     // Game State
     AppState currentState = AppState::LOADING;

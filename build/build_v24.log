@@ -1,0 +1,3 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+LINK : fatal error LNK1168: cannot open D:\MyProject\COGENT_ENGINE\build\Debug\COGENT_Engine.exe for writing [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]

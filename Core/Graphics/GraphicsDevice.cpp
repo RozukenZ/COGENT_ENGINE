@@ -22,6 +22,10 @@ QueueFamilyIndices GraphicsDevice::findQueueFamilies(VkPhysicalDevice device, Vk
             indices.graphicsFamily = i;
         }
 
+        if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            indices.computeFamily = i;
+        }
+
         VkBool32 presentSupport = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
 
@@ -38,8 +42,54 @@ QueueFamilyIndices GraphicsDevice::findQueueFamilies(VkPhysicalDevice device, Vk
 
 bool GraphicsDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) {
     QueueFamilyIndices indices = findQueueFamilies(device, surface);
-    // Extensions check omitted for brevity but should be here
-    return indices.isComplete();
+    
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(device, &props);
+    LOG_INFO("Checking GPU: " + std::string(props.deviceName));
+
+    if (!indices.graphicsFamily.has_value()) {
+        LOG_WARN("  - Missing Graphics Queue");
+    }
+    if (!indices.presentFamily.has_value()) {
+        LOG_WARN("  - Missing Present Queue");
+    }
+    if (!indices.computeFamily.has_value()) {
+        LOG_WARN("  - Missing Compute Queue");
+    }
+    
+    // Check extensions
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+    for (const auto& extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    if (!requiredExtensions.empty()) {
+        LOG_WARN("  - Missing Swapchain Extension");
+        for (const auto& ext : requiredExtensions) LOG_WARN("    * " + ext);
+        return false;
+    }
+
+    // Check Swapchain Support (Formats/PresentModes)
+    // This requires detailed query logic, avoiding for brevity unless necessary.
+    // For now, extensions + queues are sufficient for a "Found" check.
+
+    bool suitable = indices.isComplete() && requiredExtensions.empty();
+    if (suitable) LOG_INFO("  - Suitable!");
+    else LOG_WARN("  - Not Suitable");
+    
+    return suitable;
+}
+
+void GraphicsDevice::init(VkSurfaceKHR surface) {
+    pickPhysicalDevice(surface);
+    createLogicalDevice(surface);
+    createCommandPool();
 }
 
 GraphicsDevice::GraphicsDevice(bool enableValidation) : enableValidationLayers(enableValidation) {
@@ -81,19 +131,49 @@ void GraphicsDevice::pickPhysicalDevice(VkSurfaceKHR surface) {
     std::vector<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
+    int bestScore = -1;
+    VkPhysicalDevice bestDevice = VK_NULL_HANDLE;
+
     for (const auto& dev : devices) {
-        if (isDeviceSuitable(dev, surface)) {
-            physicalDevice = dev;
-            break;
+        if (!isDeviceSuitable(dev, surface)) continue;
+        
+        VkPhysicalDeviceProperties deviceProperties;
+        VkPhysicalDeviceFeatures deviceFeatures;
+        vkGetPhysicalDeviceProperties(dev, &deviceProperties);
+        vkGetPhysicalDeviceFeatures(dev, &deviceFeatures);
+
+        int score = 0;
+
+        // Discrete GPUs have a significant performance advantage
+        if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            score += 1000;
+        }
+
+        // Maximum possible size of textures affects graphics quality
+        score += deviceProperties.limits.maxImageDimension2D;
+
+        // Application can't function without geometry shaders (if needed, example)
+        // if (!deviceFeatures.geometryShader) {
+        //     score = 0;
+        // }
+
+        LOG_INFO("Found GPU: " + std::string(deviceProperties.deviceName) + " (Score: " + std::to_string(score) + ")");
+
+        if (score > bestScore) {
+            bestDevice = dev;
+            bestScore = score;
         }
     }
-
-    if (physicalDevice == VK_NULL_HANDLE) throw std::runtime_error("Failed to find a suitable GPU!");
     
-    // Log selected device
+    if (bestDevice != VK_NULL_HANDLE) {
+        physicalDevice = bestDevice;
+    } else {
+        throw std::runtime_error("Failed to find a suitable GPU!");
+    }
+    
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(physicalDevice, &props);
-    LOG_INFO("RHI: Selected GPU: " + std::string(props.deviceName));
+    LOG_INFO("RHI: Selected Best GPU: " + std::string(props.deviceName));
 }
 
 void GraphicsDevice::createLogicalDevice(VkSurfaceKHR surface) {

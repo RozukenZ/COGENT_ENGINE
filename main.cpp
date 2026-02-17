@@ -10,6 +10,14 @@ int main() {
     LOG_INFO("COGENT ENGINE STARTED");
     LOG_INFO("Bootstrapping System...");
 
+    LOG_INFO("Bootstrapping System...");
+    
+    // Initialize GLFW before CogentEngine (which creates Vulkan Instance)
+    if (!glfwInit()) {
+        LOG_ERROR("FATAL: Failed to initialize GLFW in main!");
+        return EXIT_FAILURE;
+    }
+
     CogentEngine app;
 
     try {

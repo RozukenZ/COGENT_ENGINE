@@ -1,0 +1,18 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+  CogentEngine.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+  DeferredLightingPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/DeferredLightingPass.cpp')
+  
+  GBuffer.cpp
+  ScreenSpaceShadows.cpp
+  main.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+  Generating Code...
+LINK : fatal error LNK1168: cannot open D:\MyProject\COGENT_ENGINE\build\Debug\COGENT_Engine.exe for writing [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]

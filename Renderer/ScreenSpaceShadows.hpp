@@ -11,6 +11,7 @@ public:
 
     void init();
     void execute(VkCommandBuffer cmd, const glm::mat4& view, const glm::mat4& proj, const glm::vec4& lightDir);
+    VkImage getImage() const { return image; }
 
     VkImage getOutputImage() const { return image; }
     VkImageView getOutputView() const { return imageView; }
@@ -33,4 +34,6 @@ private:
     VkPipeline pipeline;
     VkPipelineLayout pipelineLayout;
     VkDescriptorSetLayout descriptorSetLayout;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 };

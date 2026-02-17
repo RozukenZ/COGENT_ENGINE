@@ -1,0 +1,14 @@
+[2026-02-17 10:16:22] [INFO] COGENT ENGINE STARTED
+[2026-02-17 10:16:22] [INFO] Bootstrapping System...
+[2026-02-17 10:16:22] [INFO] Bootstrapping System...
+[2026-02-17 10:16:24] [INFO] Job System Initialized
+[2026-02-17 10:16:24] [INFO] Checking GPU: Intel(R) UHD Graphics
+[2026-02-17 10:16:24] [INFO]   - Suitable!
+[2026-02-17 10:16:24] [INFO] Found GPU: Intel(R) UHD Graphics (Score: 16384)
+[2026-02-17 10:16:24] [INFO] Checking GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:16:24] [INFO]   - Suitable!
+[2026-02-17 10:16:24] [INFO] Found GPU: NVIDIA GeForce RTX 3050 Laptop GPU (Score: 33768)
+[2026-02-17 10:16:24] [INFO] RHI: Selected Best GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:16:24] [INFO] Initializing G-Buffer...
+[2026-02-17 10:16:24] [INFO] Loading Default White Texture...
+[2026-02-17 10:16:38] [FATAL] CRASH DETECTED! Exception Code: 0xc0000005

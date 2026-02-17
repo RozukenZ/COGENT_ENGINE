@@ -40,7 +40,7 @@ namespace Cogent::Renderer {
         VkMemoryAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = memReqs.size;
-        allocInfo.memoryTypeIndex = VulkanUtils::findMemoryType(device.getPhysicalDevice(), memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        allocInfo.memoryTypeIndex = device.findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(device.getDevice(), &allocInfo, nullptr, &exposureMemory) != VK_SUCCESS) {
             throw std::runtime_error("Failed to allocate Exposure Memory!");
@@ -49,7 +49,7 @@ namespace Cogent::Renderer {
     }
 
     void AutoExposurePass::createPipeline() {
-        // Descriptor Layout: 1 Input Texture, 1 Output Buffer
+        // 1. Create Descriptor Set Layout
         std::array<VkDescriptorSetLayoutBinding, 2> bindings{};
         
         bindings[0].binding = 0;
@@ -67,9 +67,11 @@ namespace Cogent::Renderer {
         layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
         layoutInfo.pBindings = bindings.data();
         
-        vkCreateDescriptorSetLayout(device.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout);
+        if (vkCreateDescriptorSetLayout(device.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+             throw std::runtime_error("Failed to create AutoExposure Descriptor Layout!");
+        }
 
-        // Pool
+        // 2. Create Descriptor Pool
         std::array<VkDescriptorPoolSize, 2> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[0].descriptorCount = 1;
@@ -82,25 +84,30 @@ namespace Cogent::Renderer {
         poolInfo.pPoolSizes = poolSizes.data();
         poolInfo.maxSets = 1;
         
-        vkCreateDescriptorPool(device.getDevice(), &poolInfo, nullptr, &descriptorPool);
+        if (vkCreateDescriptorPool(device.getDevice(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+             throw std::runtime_error("Failed to create AutoExposure Descriptor Pool!");
+        }
 
-        // Alloc Set
+        // 3. Allocate Descriptor Set
         VkDescriptorSetAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         allocInfo.descriptorPool = descriptorPool;
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &descriptorSetLayout;
-        vkAllocateDescriptorSets(device.getDevice(), &allocInfo, &descriptorSet);
+        if (vkAllocateDescriptorSets(device.getDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS) {
+             throw std::runtime_error("Failed to allocate AutoExposure Descriptor Set!");
+        }
         
-        // Pipeline Layout
+        // 4. Create Pipeline Layout
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 1;
         pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-        vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
-    }
+        if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+             throw std::runtime_error("Failed to create AutoExposure Pipeline Layout!");
+        }
 
-    void AutoExposurePass::createPipeline() {
+        // 5. Load Shader and Create Pipeline
         auto computeShaderCode = VulkanUtils::readFile("Shaders/AutoExposure.comp.spv");
         VkShaderModule computeShaderModule = VulkanUtils::createShaderModule(device.getDevice(), computeShaderCode);
 
@@ -109,14 +116,6 @@ namespace Cogent::Renderer {
         computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         computeShaderStageInfo.module = computeShaderModule;
         computeShaderStageInfo.pName = "main";
-
-        // Descriptor Set Layout creation (already done in ctor) ...
-        
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-        vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
 
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;

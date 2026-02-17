@@ -13,8 +13,8 @@ public:
     VkPipelineLayout getPipelineLayout() { return pipelineLayout; }
 
 private:
-    VkPipeline pipeline;
-    VkPipelineLayout pipelineLayout;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 
     VkShaderModule createShaderModule(VkDevice device, const std::vector<char>& code);
     static std::vector<char> readFile(const std::string& filename);

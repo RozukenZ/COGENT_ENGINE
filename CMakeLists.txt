@@ -24,6 +24,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/LightingPass.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Model.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Texture.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Resources/Streaming/Streamer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Types.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/VulkanUtils.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Camera.hpp

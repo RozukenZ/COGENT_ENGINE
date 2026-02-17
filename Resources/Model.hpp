@@ -6,7 +6,8 @@
 #include "PrimitiveMesh.hpp" // [OPSIONAL] Jika loadFromMesh butuh PrimitiveMesh
 
 // Forward declaration biar tidak circular dependency
-class PrimitiveMesh; 
+// Forward declaration biar tidak circular dependency
+struct PrimitiveMesh; 
 
 class Model {
 public:

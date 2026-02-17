@@ -1,0 +1,347 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+  main.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(45,8): error C2011: 'QueueFamilyIndices': 'struct' type redefinition [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.hpp(8,8):
+      see declaration of 'QueueFamilyIndices'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(73,10): error C2535: 'void CogentEngine::createSwapchain(void)': member function already defined or declared [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(72,10):
+      see declaration of 'CogentEngine::createSwapchain'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(169,39): error C2039: 'RenderGraph': is not a member of 'Cogent::Renderer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+      D:\MyProject\COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.hpp(7,11):
+      see declaration of 'Cogent::Renderer'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(206,12): error C2086: 'Camera CogentEngine::mainCamera': redefinition [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+D:\MyProject\COGENT_ENGINE\main.cpp(13,18): error C2280: 'CogentEngine::CogentEngine(void)': attempting to reference a deleted function [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(207,1):
+      compiler has generated 'CogentEngine::CogentEngine' here
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(207,1):
+      'CogentEngine::CogentEngine(void)': function was implicitly deleted because a data member 'CogentEngine::gBuffer' has either no appropriate default constructor or overload resolution was ambiguous
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(134,13):
+      see declaration of 'CogentEngine::gBuffer'
+  
+  GBuffer.cpp
+  Texture.cpp
+  PrimitiveMesh.cpp
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(9,6): error C2653: 'PrimitiveMesh': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(10,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(10,23): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(33,13): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(43,17): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(43,40): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(43,63): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(46,17): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(46,44): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(46,67): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(55,6): error C2653: 'PrimitiveMesh': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(56,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(56,23): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(59,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(60,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(61,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(62,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(65,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(66,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(67,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(68,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(71,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(72,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(73,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(74,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(77,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(78,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(79,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(80,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(83,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(84,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(85,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(86,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(89,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(90,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(91,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(92,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(94,5): error C2065: 'uint32_t': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(94,14): error C2146: syntax error: missing ';' before identifier 'cubeIndices' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(94,14): error C2065: 'cubeIndices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(94,26): error C7732: expected an expression before ']' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,10): error C2065: 'uint32_t': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,19): error C2146: syntax error: missing ';' before identifier 'i' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,21): error C2143: syntax error: missing ';' before ':' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,21): error C2143: syntax error: missing ')' before ':' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,21): error C2059: syntax error: ':' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(103,34): error C2059: syntax error: ')' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(109,6): error C2653: 'PrimitiveMesh': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(110,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(110,23): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(111,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(112,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(113,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(114,5): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(114,13): error C3079: an initializer list cannot be used as the right operand of this assignment operator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(120,6): error C2653: 'PrimitiveMesh': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(121,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(121,23): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,9): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,14): error C2065: 'vec3': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  CogentEngine.cpp
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,19): error C2146: syntax error: missing ';' before identifier 'normal' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,19): error C2065: 'normal': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,28): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,43): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,48): error C3861: 'vec3': identifier not found [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(129,33): error C3861: 'normalize': identifier not found [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(131,9): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(131,56): error C2065: 'normal': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(132,9): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(132,57): error C2065: 'normal': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(142,9): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(142,37): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(142,62): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(143,9): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(143,37): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(143,62): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(147,26): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(148,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(149,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(160,9): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(161,9): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(172,9): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(172,42): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(172,70): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(174,9): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(174,42): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(174,73): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(181,6): error C2653: 'PrimitiveMesh': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(182,5): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(182,23): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,13): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,18): error C2065: 'vec3': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,23): error C2146: syntax error: missing ';' before identifier 'normal' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,23): error C2065: 'normal': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,32): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,47): error C2653: 'glm': is not a class or namespace name [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,52): error C3861: 'vec3': identifier not found [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(201,37): error C3861: 'normalize': identifier not found [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(205,13): error C2065: 'vertices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(205,58): error C2065: 'normal': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(215,17): error C2065: 'indices': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(215,17): error C1003: error count exceeds 100; stopping compilation [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(45,8): error C2011: 'QueueFamilyIndices': 'struct' type redefinition [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.hpp(8,8):
+      see declaration of 'QueueFamilyIndices'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(73,10): error C2535: 'void CogentEngine::createSwapchain(void)': member function already defined or declared [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(72,10):
+      see declaration of 'CogentEngine::createSwapchain'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(169,39): error C2039: 'RenderGraph': is not a member of 'Cogent::Renderer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+      D:\MyProject\COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.hpp(7,11):
+      see declaration of 'Cogent::Renderer'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(206,12): error C2086: 'Camera CogentEngine::mainCamera': redefinition [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(79,5): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(89,33): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(96,18): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(96,46): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(96,13): error C2660: 'GBuffer::init': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(55,10):
+      see declaration of 'GBuffer::init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(96,13):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(99,62): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,24): error C2039: 'ResourceManager': is not a member of 'Cogent::Resources' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Streaming\Streamer.hpp(14,15):
+      see declaration of 'Cogent::Resources'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,24): error C3083: 'ResourceManager': the symbol to the left of a '::' must be a type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,41): error C2039: 'Get': is not a member of 'Cogent::Resources' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Streaming\Streamer.hpp(14,15):
+      see declaration of 'Cogent::Resources'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,41): error C3861: 'Get': identifier not found [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,52): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,80): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,116): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(102,149): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,23): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,51): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,87): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,120): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,18): error C2660: 'Texture::load': function does not take 2 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Texture.hpp(11,10):
+      see declaration of 'Texture::load'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(110,18):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(116,26): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(123,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(123,56): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(123,15): error C2660: 'Model::loadFromMesh': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Model.hpp(20,10):
+      see declaration of 'Model::loadFromMesh'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(123,15):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(126,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(126,56): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(126,15): error C2660: 'Model::loadFromMesh': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Model.hpp(20,10):
+      see declaration of 'Model::loadFromMesh'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(126,15):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(129,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(129,56): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(129,15): error C2660: 'Model::loadFromMesh': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Resources\Model.hpp(20,10):
+      see declaration of 'Model::loadFromMesh'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(129,15):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(137,5): error C2065: 'deferredLightingPass': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(137,49): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(138,5): error C2065: 'deferredLightingPass': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(139,5): error C2065: 'deferredLightingPass': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(142,5): error C2065: 'screenSpaceShadows': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(142,45): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(143,5): error C2065: 'screenSpaceShadows': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(144,5): error C2065: 'screenSpaceShadows': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(144,53): error C2039: 'getDepthView': is not a member of 'GBuffer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(7,7):
+      see declaration of 'GBuffer'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(151,54): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(153,27): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(153,57): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(153,93): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(154,17): error C3536: 'indices': cannot be used before it is initialized [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(155,17): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(153,14): error C2660: 'EditorUI::Init': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.hpp(23,10):
+      see declaration of 'EditorUI::Init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(153,14):
+      while trying to match the argument list '(GLFWwindow *, VkRenderPass, int)'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,20): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,48): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,84): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,117): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,15): error C2660: 'RayTracer::init': function does not take 2 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\RayTracing\RayTracer.hpp(29,10):
+      see declaration of 'RayTracer::init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(160,15):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(205,39): error C2039: 'getPosition': is not a member of 'Camera' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Core\Camera.hpp(9,7):
+      see declaration of 'Camera'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(250,22): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(250,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(250,5): error C2365: 'vkDeviceWaitIdle': redefinition; previous definition was 'function' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\SDK\Vulkan\include\vulkan\vulkan_core.h(4608,32):
+      see declaration of 'vkDeviceWaitIdle'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(251,1): error C2059: syntax error: '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(251,1): error C2143: syntax error: missing ';' before '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(253,30): error C2143: syntax error: missing ';' before '{' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(253,30): error C2447: '{': missing function header (old-style formal list?) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(322,29): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(326,34): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(339,27): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(340,27): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(341,23): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(348,47): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(351,42): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(353,42): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(387,24): error C2079: 'indices' uses undefined struct 'QueueFamilyIndices' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(387,68): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(388,14): error C2466: cannot allocate an array of constant size 0 [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(397,30): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(401,29): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(403,29): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(428,27): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(442,22): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(445,30): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(448,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(450,27): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(452,21): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(452,13): error C2660: 'GBuffer::cleanup': function does not take 1 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(56,10):
+      see declaration of 'GBuffer::cleanup'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(452,13):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(458,18): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(458,46): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(458,13): error C2660: 'GBuffer::init': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(55,10):
+      see declaration of 'GBuffer::init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(458,13):
+      while trying to match the argument list '()'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(500,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(520,33): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(542,25): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(562,37): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(573,17): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(581,20): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(584,35): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(592,41): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(606,22): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(607,24): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(621,32): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(633,34): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(651,28): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(667,37): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(681,32): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(681,32): error C1003: error count exceeds 100; stopping compilation [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  GraphicsDevice.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/GraphicsDevice.cpp')
+  
+  Swapchain.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/Swapchain.cpp')
+  
+  GpuProfiler.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Diagnostics/GpuProfiler.cpp')
+  
+  RenderGraph.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/Graph/RenderGraph.cpp')
+  
+  DeferredLightingPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/DeferredLightingPass.cpp')
+  
+  ShadowPass.cpp
+  ScreenSpaceShadows.cpp
+  InstanceBuffer.cpp
+  ANSRPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/ANSR/ANSRPass.cpp')
+  
+  AutoExposurePass.cpp
+  VulkanUtils.cpp
+  Generating Code...

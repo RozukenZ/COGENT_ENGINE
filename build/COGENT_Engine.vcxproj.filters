@@ -19,6 +19,9 @@
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\COGENT_ENGINE\Resources\Streaming\Streamer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

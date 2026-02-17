@@ -1,4 +1,8 @@
 #include "CogentEngine.hpp"
+#include <set>
+#include <algorithm>
+#include <fstream>
+#include "../Resources/ResourceManager.hpp"
 
 // Statically link the callback for GLFW
 void CogentEngine::mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
@@ -26,6 +30,14 @@ void CogentEngine::mouse_callback(GLFWwindow* window, double xposIn, double ypos
     app->lastY = ypos;
 
     app->mainCamera.processMouseMovement(xoffset, yoffset);
+}
+
+// Constructor
+CogentEngine::CogentEngine() 
+    : graphicsDevice(true), 
+      gBuffer(graphicsDevice, WIDTH, HEIGHT) 
+{
+    // Initialize other members if needed
 }
 
 void CogentEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -65,6 +77,9 @@ void CogentEngine::initWindow() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE); // Or TRUE if you handle resize
     window = glfwCreateWindow(WIDTH, HEIGHT, "COGENT Engine (Phase 0: Foundation)", nullptr, nullptr);
+    if (!window) {
+        throw std::runtime_error("FATAL: Failed to create GLFW Window! Check if GPU drivers support Vulkan.");
+    }
     
     glfwSetWindowUserPointer(window, this); // Important for callbacks
     glfwSetCursorPosCallback(window, mouse_callback);
@@ -93,7 +108,7 @@ void CogentEngine::createSurface() {
 
 void CogentEngine::initResources() {
     LOG_INFO("Initializing G-Buffer...");
-    gBuffer.init(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), WIDTH, HEIGHT);
+    // gBuffer is initialized in constructor
     
     // Initialize Streamer
     streamer = std::make_unique<Cogent::Resources::Streamer>(graphicsDevice);
@@ -134,14 +149,15 @@ void CogentEngine::initResources() {
     createSwapchainFramebuffers(); 
     
     // Initialize Deferred Lighting Pass (and internal descriptors)
-    deferredLightingPass = DeferredLightingPass(graphicsDevice, lightingRenderPass, swapchainExtent);
-    deferredLightingPass.init();
-    deferredLightingPass.updateDescriptorSets(gBuffer);
+    // Initialize Deferred Lighting Pass (and internal descriptors)
+    deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
+    deferredLightingPass->init();
+    deferredLightingPass->updateDescriptorSets(gBuffer);
 
     // Initialize SSS
-    screenSpaceShadows = ScreenSpaceShadows(graphicsDevice, swapchainExtent);
-    screenSpaceShadows.init();
-    screenSpaceShadows.updateDescriptorSets(gBuffer.getDepthView(), textureSampler, uniformBuffer);
+    screenSpaceShadows = std::make_unique<ScreenSpaceShadows>(graphicsDevice, swapchainExtent);
+    screenSpaceShadows->init();
+    screenSpaceShadows->updateDescriptorSets(gBuffer.getDepthImageView(), textureSampler, uniformBuffer);
 
     LOG_INFO("Resources Initialized Successfully!");
 
@@ -202,7 +218,7 @@ void CogentEngine::mainLoop() {
         lastFrame = currentFrame;
 
         // Update Streamer
-        glm::vec3 camPos = mainCamera.getPosition(); 
+        glm::vec3 camPos = mainCamera.position; 
         streamer->update(camPos, deltaTime);
 
         glfwPollEvents();
@@ -234,19 +250,25 @@ void CogentEngine::mainLoop() {
             spawnObject(meshID, glm::vec3(0, 0, 0)); 
         }, &renderingViewportSize, { (float)swapchainExtent.width, (float)swapchainExtent.height });
 
+        LOG_INFO("MainLoop: EditorUI::Update returned");
+
         if (currentState == AppState::EDITOR && selectedObjectIndex != -1) {
-            gameObjects[selectedObjectIndex].model = selectedObject.model;
-            gameObjects[selectedObjectIndex].color = selectedObject.color;
+            if (selectedObjectIndex >= 0 && selectedObjectIndex < gameObjects.size()) {
+                 gameObjects[selectedObjectIndex].model = selectedObject.model;
+                 gameObjects[selectedObjectIndex].color = selectedObject.color;
+            }
         }
 
         if (currentState == AppState::EDITOR) {
+            LOG_INFO("MainLoop: Calling updateUniformBuffer");
             updateUniformBuffer();
+            LOG_INFO("MainLoop: updateUniformBuffer returned");
         }
 
+        LOG_INFO("MainLoop: Calling drawFrame");
         drawFrame();
-    }
-        drawFrame();
-    }
+        LOG_INFO("MainLoop: drawFrame returned");
+    } // End of main loop
     vkDeviceWaitIdle(graphicsDevice.getDevice());
 }
 
@@ -284,7 +306,7 @@ void CogentEngine::cleanup() {
     // Command Pool destroyed by GraphicsDevice
     // vkDestroyCommandPool(device, commandPool, nullptr); 
 
-    gBuffer.cleanup(graphicsDevice.getDevice());
+    // gBuffer cleanup handled by destructor
     rayTracer.cleanup(graphicsDevice.getDevice());
     myModel.cleanup(graphicsDevice.getDevice());
 
@@ -449,13 +471,13 @@ void CogentEngine::recreateSwapchain() {
     }
     vkDestroySwapchainKHR(graphicsDevice.getDevice(), swapchain, nullptr);
     
-    gBuffer.cleanup(graphicsDevice.getDevice());
+    // gBuffer cleanup handled by destructor/resize
 
     createSwapchain();
     createSwapchainImageViews();
     createSwapchainFramebuffers();
 
-    gBuffer.init(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), swapchainExtent.width, swapchainExtent.height);
+    gBuffer.resize(swapchainExtent.width, swapchainExtent.height);
 
     sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, gBuffer.getAlbedoView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
@@ -650,7 +672,33 @@ void CogentEngine::createDescriptorSets() {
 
     vkUpdateDescriptorSets(graphicsDevice.getDevice(), 1, &descriptorWrite, 0, nullptr);
 }
-// updateUniformBuffer omitted for brevity
+
+void CogentEngine::updateUniformBuffer() {
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    CameraUBO ubo{};
+    ubo.view = mainCamera.getViewMatrix();
+    ubo.proj = mainCamera.getProjectionMatrix(renderingViewportSize.x / renderingViewportSize.y);
+    ubo.proj[1][1] *= -1; // Vulkan flip Y
+
+    // For TAA, we should store previous matrices. For now, just use current.
+    static glm::mat4 lastView = ubo.view;
+    static glm::mat4 lastProj = ubo.proj;
+    ubo.prevView = lastView;
+    ubo.prevProj = lastProj;
+    
+    lastView = ubo.view;
+    lastProj = ubo.proj;
+
+    ubo.viewPos = mainCamera.position;
+    ubo.time = time;
+    ubo.deltaTime = deltaTime;
+
+    memcpy(uniformBufferMapped, &ubo, sizeof(ubo));
+}
+
 void CogentEngine::createTextureDescriptors() {
     VkDescriptorSetLayoutBinding samplerLayoutBinding{};
     samplerLayoutBinding.binding = 0;
@@ -710,10 +758,13 @@ void CogentEngine::createTextureDescriptors() {
 }
 
 void CogentEngine::drawFrame() {
+    LOG_INFO("drawFrame: Waiting for Fences");
     vkWaitForFences(graphicsDevice.getDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+    LOG_INFO("drawFrame: Fences Ready");
 
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(graphicsDevice.getDevice(), swapchain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    LOG_INFO("drawFrame: Image Acquired Index: " + std::to_string(imageIndex));
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         recreateSwapchain();
@@ -722,17 +773,20 @@ void CogentEngine::drawFrame() {
         throw std::runtime_error("Failed to acquire swapchain image!");
     }
 
+    LOG_INFO("drawFrame: Resetting Fences");
     vkResetFences(graphicsDevice.getDevice(), 1, &inFlightFence);
+    
+    LOG_INFO("drawFrame: Resetting Command Buffer");
     vkResetCommandBuffer(commandBuffer, 0);
+    
+    LOG_INFO("drawFrame: Recording Command Buffer");
     recordCommandBuffer(commandBuffer, imageIndex);
+    LOG_INFO("drawFrame: Command Buffer Recorded");
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitSemaphores;
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -745,9 +799,11 @@ void CogentEngine::drawFrame() {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
+    LOG_INFO("drawFrame: Submitting Queue");
     if (vkQueueSubmit(graphicsDevice.getGraphicsQueue(), 1, &submitInfo, inFlightFence) != VK_SUCCESS) {
         throw std::runtime_error("Failed to submit draw command buffer!");
     }
+    LOG_INFO("drawFrame: Queue Submitted");
 
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -900,11 +956,54 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         // Need to ensure Depth is readable. (Depth Attachment Store Op was STORE, Layout DEPTH_STENCIL_ATTACHMENT_OPTIMAL or similar)
         // Transition Depth to Shader Read Only if needed, or use Combined Image Sampler layout.
         
-        // For now, assuming SSS handles its internal barriers or we rely on standard transitions. 
+        // Transition SSS Image to GENERAL for Compute Write
+        VkImageMemoryBarrier sssImageBarrier{};
+        sssImageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        sssImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
+        sssImageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        sssImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        sssImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        sssImageBarrier.image = screenSpaceShadows->getImage(); 
+        sssImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        sssImageBarrier.subresourceRange.baseMipLevel = 0;
+        sssImageBarrier.subresourceRange.levelCount = 1;
+        sssImageBarrier.subresourceRange.baseArrayLayer = 0;
+        sssImageBarrier.subresourceRange.layerCount = 1;
+        sssImageBarrier.srcAccessMask = 0;
+        sssImageBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+        // Ensure Depth is readable by SSS (Synchronize GBuffer Write -> Compute Read)
+        VkImageMemoryBarrier depthBarrier{};
+        depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        depthBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; // No layout change needed
+        depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depthBarrier.image = gBuffer.getDepthImage(); // Need getter
+        depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        depthBarrier.subresourceRange.baseMipLevel = 0;
+        depthBarrier.subresourceRange.levelCount = 1;
+        depthBarrier.subresourceRange.baseArrayLayer = 0;
+        depthBarrier.subresourceRange.layerCount = 1;
+        depthBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        depthBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        VkImageMemoryBarrier sssBarriers[] = { sssImageBarrier, depthBarrier };
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            2, sssBarriers
+        );
+
         // Dispatch SSS:
         // Use a fixed light direction for now (e.g. from top-right-front)
         glm::vec4 lightDir = glm::vec4(normalize(glm::vec3(0.5f, -1.0f, 0.2f)), 0.0f);
-        screenSpaceShadows.execute(commandBuffer, mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix(), lightDir);
+        screenSpaceShadows->execute(commandBuffer, mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix(), lightDir);
 
         // Memory Barrier: Ensure SSS Write finishes before Lighting Pass reads it? 
         // (If Lighting Pass reads shadow mask)
@@ -943,7 +1042,7 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         // Pass the Global UBO (Camera) descriptor set if needed, or scene descriptor.
         // The DeferredLightingPass::execute signature might need checking. 
         // Checked header: void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet);
-        deferredLightingPass.execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
+        deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
 
         editorUI.Draw(commandBuffer);
 

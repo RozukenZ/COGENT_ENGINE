@@ -1,0 +1,69 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+  main.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+D:\MyProject\COGENT_ENGINE\main.cpp(13,18): error C2280: 'CogentEngine::CogentEngine(void)': attempting to reference a deleted function [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(202,1):
+      compiler has generated 'CogentEngine::CogentEngine' here
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(202,1):
+      'CogentEngine::CogentEngine(void)': function was implicitly deleted because a data member 'CogentEngine::gBuffer' has either no appropriate default constructor or overload resolution was ambiguous
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(128,13):
+      see declaration of 'CogentEngine::gBuffer'
+  
+  CogentEngine.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(36,15): error C2600: 'CogentEngine::CogentEngine': cannot define a compiler-generated special member function (must be declared in the class first) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(108,13): error C2660: 'GBuffer::init': function does not take 4 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(55,10):
+      see declaration of 'GBuffer::init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(108,13):
+      while trying to match the argument list '(VkDevice, VkPhysicalDevice, const uint32_t, const uint32_t)'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(218,39): error C2039: 'getPosition': is not a member of 'Camera' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Core\Camera.hpp(9,7):
+      see declaration of 'Camera'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(263,22): error C2065: 'graphicsDevice': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(263,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(263,5): error C2365: 'vkDeviceWaitIdle': redefinition; previous definition was 'function' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\SDK\Vulkan\include\vulkan\vulkan_core.h(4608,32):
+      see declaration of 'vkDeviceWaitIdle'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(264,1): error C2059: syntax error: '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(264,1): error C2143: syntax error: missing ';' before '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(266,30): error C2143: syntax error: missing ';' before '{' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(266,30): error C2447: '{': missing function header (old-style formal list?) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(465,13): error C2660: 'GBuffer::cleanup': function does not take 1 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(56,10):
+      see declaration of 'GBuffer::cleanup'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(465,13):
+      while trying to match the argument list '(VkDevice)'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(471,13): error C2660: 'GBuffer::init': function does not take 4 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(55,10):
+      see declaration of 'GBuffer::init'
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(471,13):
+      while trying to match the argument list '(VkDevice, VkPhysicalDevice, uint32_t, uint32_t)'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(749,26): error C2374: 'waitStages': redefinition; multiple initialization [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(746,26):
+      see declaration of 'waitStages'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(920,28): error C2039: 'execute': is not a member of 'std::unique_ptr<ScreenSpaceShadows,std::default_delete<ScreenSpaceShadows>>' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\VisuakStudio\VC\Tools\MSVC\14.42.34433\include\memory(3335,7):
+      see declaration of 'std::unique_ptr<ScreenSpaceShadows,std::default_delete<ScreenSpaceShadows>>'
+  
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.cpp(959,30): error C2039: 'execute': is not a member of 'std::unique_ptr<DeferredLightingPass,std::default_delete<DeferredLightingPass>>' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\VisuakStudio\VC\Tools\MSVC\14.42.34433\include\memory(3335,7):
+      see declaration of 'std::unique_ptr<DeferredLightingPass,std::default_delete<DeferredLightingPass>>'
+  
+  GraphicsDevice.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/GraphicsDevice.cpp')
+  
+  VulkanUtils.cpp
+  Generating Code...

@@ -144,7 +144,7 @@ void ScreenSpaceShadows::updateDescriptorSets(VkImageView depthView, VkSampler d
     std::array<VkWriteDescriptorSet, 3> writes{};
 
     VkDescriptorImageInfo depthInfo{};
-    depthInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    depthInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     depthInfo.imageView = depthView;
     depthInfo.sampler = depthSampler;
     
@@ -181,7 +181,44 @@ void ScreenSpaceShadows::updateDescriptorSets(VkImageView depthView, VkSampler d
     vkUpdateDescriptorSets(device.getDevice(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
 }
 
-// ... createPipeline ...
+void ScreenSpaceShadows::createPipeline() {
+    auto computeShaderCode = VulkanUtils::readFile("Shaders/sss.comp.spv");
+
+    VkShaderModule computeShaderModule = VulkanUtils::createShaderModule(device.getDevice(), computeShaderCode);
+
+    VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
+    computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    computeShaderStageInfo.module = computeShaderModule;
+    computeShaderStageInfo.pName = "main";
+
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(glm::mat4) * 2 + sizeof(glm::vec4); // View + Proj + LightDir
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+
+    if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create SSS Pipeline Layout!");
+    }
+
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.stage = computeShaderStageInfo;
+
+    if (vkCreateComputePipelines(device.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create SSS Pipeline!");
+    }
+
+    vkDestroyShaderModule(device.getDevice(), computeShaderModule, nullptr);
+}
 
 void ScreenSpaceShadows::execute(VkCommandBuffer cmd, const glm::mat4& view, const glm::mat4& proj, const glm::vec4& lightDir) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);

@@ -7,10 +7,10 @@
 class GBuffer {
 public:
     struct FramebufferAttachment {
-        VkImage image;
-        VkDeviceMemory mem;
-        VkImageView view;
-        VkFormat format;
+        VkImage image = VK_NULL_HANDLE;
+        VkDeviceMemory mem = VK_NULL_HANDLE;
+        VkImageView view = VK_NULL_HANDLE;
+        VkFormat format = VK_FORMAT_UNDEFINED;
     };
 
     GBuffer(GraphicsDevice& device, uint32_t width, uint32_t height);
@@ -25,6 +25,13 @@ public:
     VkImageView getPositionView() const { return position.view; }
     VkImageView getNormalView() const { return normal.view; }
     VkImageView getAlbedoView() const { return albedo.view; }
+
+    // Compatibility Getters
+    VkImageView getPositionImageView() const { return position.view; }
+    VkImageView getNormalImageView() const { return normal.view; }
+    VkImageView getAlbedoImageView() const { return albedo.view; }
+    VkImageView getDepthImageView() const { return depth.view; }
+    VkImage getDepthImage() const { return depth.image; } // New Getter
     
     // Low-level access for barriers
     VkImage getPositionImage() const { return position.image; }
@@ -58,6 +65,7 @@ private:
 
     // Attachments: Position, Normal, Albedo
     FramebufferAttachment position, normal, albedo, depth;
+    std::vector<FramebufferAttachment> attachments; // Added to support getImageView(index)
     VkSampler sampler; // Single sampler for all attachments
 
     VkDescriptorSetLayout descriptorSetLayout;

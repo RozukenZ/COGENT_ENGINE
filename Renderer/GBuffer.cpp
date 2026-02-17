@@ -3,8 +3,10 @@
 #include "../Core/VulkanUtils.hpp"
 
 GBuffer::GBuffer(GraphicsDevice& device, uint32_t width, uint32_t height)
-    : device(device), width(width), height(height) {
-    init();
+    : device(device), width(width), height(height), 
+      renderPass(VK_NULL_HANDLE), framebuffer(VK_NULL_HANDLE), sampler(VK_NULL_HANDLE),
+      descriptorSetLayout(VK_NULL_HANDLE), descriptorPool(VK_NULL_HANDLE), descriptorSet(VK_NULL_HANDLE) {
+    // init() removed: Must be called explicitly after device creation
 }
 
 GBuffer::~GBuffer() {
@@ -27,6 +29,13 @@ void GBuffer::init() {
     // Depth attachment (using GraphicsDevice helper if available, but for now logic is here)
     // Assuming D32_SFLOAT for simplicity, ideally queried from device
     createAttachment(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depth);
+
+    // Populate attachments vector for easy access
+    attachments.resize(4);
+    attachments[0] = position;
+    attachments[1] = normal;
+    attachments[2] = albedo;
+    attachments[3] = depth;
 
     // 2. Create Render Pass
     std::array<VkAttachmentDescription, 4> attachments = {};
@@ -190,18 +199,23 @@ void GBuffer::createAttachment(VkFormat format, VkImageUsageFlags usage, Framebu
 }
 
 void GBuffer::cleanup() {
-    vkDestroySampler(device.getDevice(), sampler, nullptr);
-    vkDestroyFramebuffer(device.getDevice(), framebuffer, nullptr);
-    vkDestroyRenderPass(device.getDevice(), renderPass, nullptr);
+    VkDevice dev = device.getDevice();
+    if (dev == VK_NULL_HANDLE) return;
+
+    vkDestroySampler(dev, sampler, nullptr);
+    vkDestroyFramebuffer(dev, framebuffer, nullptr);
+    vkDestroyRenderPass(dev, renderPass, nullptr);
 
     auto destroyAttach = [&](FramebufferAttachment& att) {
-        vkDestroyImageView(device.getDevice(), att.view, nullptr);
-        vkDestroyImage(device.getDevice(), att.image, nullptr);
-        vkFreeMemory(device.getDevice(), att.mem, nullptr);
+        vkDestroyImageView(dev, att.view, nullptr);
+        vkDestroyImage(dev, att.image, nullptr);
+        vkFreeMemory(dev, att.mem, nullptr);
     };
 
     destroyAttach(position);
     destroyAttach(normal);
     destroyAttach(albedo);
     destroyAttach(depth);
+    
+    attachments.clear();
 }

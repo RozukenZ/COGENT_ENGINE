@@ -1,0 +1,60 @@
+[2026-02-17 10:19:12] [INFO] COGENT ENGINE STARTED
+[2026-02-17 10:19:12] [INFO] Bootstrapping System...
+[2026-02-17 10:19:12] [INFO] Bootstrapping System...
+[2026-02-17 10:19:13] [INFO] Job System Initialized
+[2026-02-17 10:19:13] [INFO] Checking GPU: Intel(R) UHD Graphics
+[2026-02-17 10:19:13] [INFO]   - Suitable!
+[2026-02-17 10:19:13] [INFO] Found GPU: Intel(R) UHD Graphics (Score: 16384)
+[2026-02-17 10:19:13] [INFO] Checking GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:19:13] [INFO]   - Suitable!
+[2026-02-17 10:19:13] [INFO] Found GPU: NVIDIA GeForce RTX 3050 Laptop GPU (Score: 33768)
+[2026-02-17 10:19:13] [INFO] RHI: Selected Best GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-02-17 10:19:13] [INFO] Initializing G-Buffer...
+[2026-02-17 10:19:13] [INFO] Loading Default White Texture...
+build\Debug\COGENT_Eng
+ine.exe : WARNING: 
+Gagal memuat texture: 
+textures/white.png. 
+Menggunakan fallback.
+At line:1 char:1
++ build\Debug\COGENT_E
+ngine.exe > 
+run_v27.log 2>&1
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo    
+          : 
+NotSpecified: (WAR    
+NING: Gagal ...nakan 
+f    allback.:String) 
+[], R    
+emoteException
+    + 
+FullyQualifiedErrorI  
+  d : 
+NativeCommandError
+ 
+[2026-02-17 10:19:13] [INFO] Building Graphics Pipeline...
+[2026-02-17 10:19:13] [INFO] Generating Primitive Meshes...
+[2026-02-17 10:19:13] [INFO] Resources Initialized Successfully!
+[2026-02-17 10:19:13] [INFO] Initializing ImGui Editor UI...
+[2026-02-17 10:19:13] [INFO] Initializing Ray Tracer...
+[2026-02-17 10:19:13] [INFO] Spawning Initial Objects...
+[2026-02-17 10:19:13] [INFO] Attempting to Spawn Object with MeshID: 0
+[2026-02-17 10:19:13] [INFO] Spawned Object: Cube 0
+[2026-02-17 10:19:13] [INFO] Attempting to Spawn Object with MeshID: 1
+[2026-02-17 10:19:13] [INFO] Spawned Object: Sphere 1
+[2026-02-17 10:19:13] [INFO] --- DIAGNOSTIC CHECK ---
+[2026-02-17 10:19:13] [INFO] --- ALL SYSTEMS GO ---
+[2026-02-17 10:19:13] [INFO] ImGui::Render() Starting...
+[2026-02-17 10:19:13] [INFO] ImGui::Render() Finished
+[2026-02-17 10:19:13] [INFO] MainLoop: EditorUI::Update returned
+[2026-02-17 10:19:13] [INFO] MainLoop: Calling drawFrame
+[2026-02-17 10:19:13] [INFO] drawFrame: Waiting for Fences
+[2026-02-17 10:19:13] [INFO] drawFrame: Fences Ready
+[2026-02-17 10:19:13] [INFO] drawFrame: Image Acquired Index: 0
+[2026-02-17 10:19:13] 
+[FATAL] CRASH 
+DETECTED! Exception 
+Code: 0xc0000005

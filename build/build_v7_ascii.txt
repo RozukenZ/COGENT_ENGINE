@@ -1,0 +1,71 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+  main.cpp
+  RenderPipeline.cpp
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(24,10): error C1083: Cannot open include file: '../Renderer/Model.hpp': No such file or directory [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+  Model.cpp
+  Texture.cpp
+  PrimitiveMesh.cpp
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(14,28): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(14,41): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(19,41): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(123,59): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(152,59): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(189,41): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Geometry\PrimitiveMesh.cpp(196,35): error C2065: 'PI': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  CogentEngine.cpp
+D:\MyProject\COGENT_ENGINE\Engine\CogentEngine.hpp(24,10): error C1083: Cannot open include file: '../Renderer/Model.hpp': No such file or directory [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+  GraphicsDevice.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/GraphicsDevice.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp(29,21): error C2039: 'presentFamily': is not a member of 'QueueFamilyIndices' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.hpp(8,8):
+      see declaration of 'QueueFamilyIndices'
+  
+D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp(103,87): error C2039: 'presentFamily': is not a member of 'QueueFamilyIndices' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.hpp(8,8):
+      see declaration of 'QueueFamilyIndices'
+  
+D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp(133,38): error C2039: 'presentFamily': is not a member of 'QueueFamilyIndices' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.hpp(8,8):
+      see declaration of 'QueueFamilyIndices'
+  
+D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp(133,5): error C2660: 'vkGetDeviceQueue': function does not take 3 arguments [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\SDK\Vulkan\include\vulkan\vulkan_core.h(4593,28):
+      see declaration of 'vkGetDeviceQueue'
+      D:\MyProject\COGENT_ENGINE\Core\Graphics\GraphicsDevice.cpp(133,5):
+      while trying to match the argument list '(VkDevice, int, VkQueue *)'
+  
+  DeferredLightingPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/DeferredLightingPass.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Renderer\DeferredLightingPass.cpp(124,39): error C2039: 'getPositionImageView': is not a member of 'GBuffer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(7,7):
+      see declaration of 'GBuffer'
+  
+D:\MyProject\COGENT_ENGINE\Renderer\DeferredLightingPass.cpp(129,39): error C2039: 'getNormalImageView': is not a member of 'GBuffer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(7,7):
+      see declaration of 'GBuffer'
+  
+D:\MyProject\COGENT_ENGINE\Renderer\DeferredLightingPass.cpp(134,39): error C2039: 'getAlbedoImageView': is not a member of 'GBuffer' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Renderer\GBuffer.hpp(7,7):
+      see declaration of 'GBuffer'
+  
+  ShadowPass.cpp
+  ScreenSpaceShadows.cpp
+  ANSRPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(87,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/ANSR/ANSRPass.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp(177,10): error C2065: 'colorInfo': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp(178,10): error C2065: 'colorInfo': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp(207,44): error C2065: 'colorInfo': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  AutoExposurePass.cpp
+  VulkanUtils.cpp
+  Generating Code...

@@ -106,6 +106,7 @@ void Texture::loadCPU() {
     if (!pixels) {
         std::cerr << "WARNING: Gagal memuat texture: " << path << ". Menggunakan fallback." << std::endl;
         texWidth = 1; texHeight = 1; texChannels = 4;
+        this->width = 1; this->height = 1; // [FIX] Update member variables!
         pixelData.resize(4);
         pixelData[0] = 255; pixelData[1] = 255; pixelData[2] = 255; pixelData[3] = 255;
         isFallback = true;
@@ -121,7 +122,7 @@ void Texture::loadCPU() {
     state = Cogent::Resources::StreamingState::LOADED_CPU;
 }
 
-void Texture::uploadGPU(Cogent::Core::Graphics::GraphicsDevice& device) {
+void Texture::uploadGPU(GraphicsDevice& device) {
     if (pixelData.empty()) return;
 
     state = Cogent::Resources::StreamingState::UPLOADING;

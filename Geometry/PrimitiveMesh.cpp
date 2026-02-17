@@ -1,5 +1,8 @@
 #include "PrimitiveMesh.hpp"
 #include <cmath>
+#ifndef PI
+#define PI 3.14159265359f
+#endif
 
 // ==========================================
 // 1. SPHERE (Bola)
