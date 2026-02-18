@@ -6,7 +6,7 @@ layout (local_size_x = 16, local_size_y = 16) in;
 layout (binding = 0) uniform sampler2D inputColor;  // Low Res
 layout (binding = 1) uniform sampler2D inputMotion; // Low Res (Velocity)
 layout (binding = 2) uniform sampler2D inputDepth;  // Low Res
-layout (binding = 3) uniform sampler2D historyColor;// High Res (Read)
+layout (binding = 3) uniform sampler2D inputHistory;// High Res (Read)
 layout (binding = 4, rgba8) uniform image2D outputColor; // High Res (Write)
 
 // Constants (Push Constants or UBO in real engine)
@@ -45,7 +45,7 @@ void main() {
     bool validHistory = (prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0);
 
     if (validHistory) {
-        historyColor = texture(historyColor, prevUV).rgb;
+        historyColor = texture(inputHistory, prevUV).rgb;
         
         // 5. Variance Clipping / Clamp to Neighborhood
         // (Simplified: Just clamp history to current pixel "box" to avoid ghosting)

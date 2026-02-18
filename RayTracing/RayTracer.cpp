@@ -1,6 +1,5 @@
 #include "RayTracer.hpp"
 #include <fstream>
-#include <iostream>
 #include <vector>
 #include <cstring>
 #include <cmath> // [FIX] Required for sin/cos

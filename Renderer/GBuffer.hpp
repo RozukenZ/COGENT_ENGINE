@@ -52,8 +52,9 @@ public:
     VkDescriptorSetLayout getDescriptorSetLayout() const { return descriptorSetLayout; }
     VkDescriptorSet getDescriptorSet() const { return descriptorSet; }
 
+    void init(); // Made public for explicit initialization
+
 private:
-    void init();
     void cleanup();
     void createAttachment(VkFormat format, VkImageUsageFlags usage, FramebufferAttachment& attachment);
 

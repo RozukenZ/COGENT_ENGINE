@@ -1,0 +1,191 @@
+MSBuild version 17.12.6+db5f6012c for .NET Framework
+
+  1>Checking Build System
+  Building Custom Rule D:/MyProject/COGENT_ENGINE/CMakeLists.txt
+  main.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../main.cpp')
+  
+  GBuffer.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/GBuffer.cpp')
+  
+  RenderPipeline.cpp
+  LightingPass.cpp
+  Model.cpp
+  Texture.cpp
+  Streamer.cpp
+  imgui.cpp
+  imgui_draw.cpp
+  imgui_demo.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_vulkan.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  EditorUI.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Editor/EditorUI.cpp')
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(62,34): error C2065: 'window': undeclared identifier [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(62,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(62,5): error C2365: 'ImGui_ImplGlfw_InitForVulkan': redefinition; previous definition was 'function' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_glfw.h(36,25):
+      see declaration of 'ImGui_ImplGlfw_InitForVulkan'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(65,15): error C2146: syntax error: missing ';' before identifier 'Instance' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(66,15): error C2146: syntax error: missing ';' before identifier 'PhysicalDevice' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(67,15): error C2146: syntax error: missing ';' before identifier 'Device' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(68,15): error C2146: syntax error: missing ';' before identifier 'QueueFamily' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(69,15): error C2146: syntax error: missing ';' before identifier 'Queue' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(70,15): error C2146: syntax error: missing ';' before identifier 'PipelineCache' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(71,15): error C2146: syntax error: missing ';' before identifier 'DescriptorPool' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(72,15): error C2146: syntax error: missing ';' before identifier 'MinImageCount' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(73,15): error C2146: syntax error: missing ';' before identifier 'ImageCount' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(75,15): error C2146: syntax error: missing ';' before identifier 'PipelineInfoMain' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(76,15): error C2146: syntax error: missing ';' before identifier 'PipelineInfoMain' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,14): error C3484: syntax error: expected '->' before the return type [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,15): error C3613: missing return type after '->' ('int' assumed) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,5): error C2371: 'init_info': redefinition; different basic types [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(64,31):
+      see declaration of 'init_info'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(77,15): error C2146: syntax error: missing ';' before identifier 'PipelineInfoMain' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(79,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(79,5): error C2365: 'ImGui_ImplVulkan_Init': redefinition; previous definition was 'function' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+      D:\MyProject\COGENT_ENGINE\Vendor\imgui\imgui_impl_vulkan.h(142,33):
+      see declaration of 'ImGui_ImplVulkan_Init'
+  
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(80,1): error C2059: syntax error: '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(80,1): error C2143: syntax error: missing ';' before '}' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(83,305): error C2143: syntax error: missing ';' before '{' [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+D:\MyProject\COGENT_ENGINE\Editor\EditorUI.cpp(83,305): error C2447: '{': missing function header (old-style formal list?) [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  ImGuizmo.cpp
+  PrimitiveMesh.cpp
+  RayTracer.cpp
+  CogentEngine.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Engine/CogentEngine.cpp')
+  
+  GraphicsDevice.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/GraphicsDevice.cpp')
+  
+  Generating Code...
+  Compiling...
+  Swapchain.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Graphics/Swapchain.cpp')
+  
+  GpuProfiler.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Core/Diagnostics/GpuProfiler.cpp')
+  
+  RenderGraph.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/Graph/RenderGraph.cpp')
+  
+  DeferredLightingPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/DeferredLightingPass.cpp')
+  
+  ShadowPass.cpp
+  ScreenSpaceShadows.cpp
+  VisibilitySystem.cpp
+  InstanceBuffer.cpp
+  ANSRPass.cpp
+D:\MyProject\COGENT_ENGINE\Core\Logger.hpp(100,73): warning C4996: 'localtime': This function or variable may be unsafe. Consider using localtime_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\MyProject\COGENT_ENGINE\build\COGENT_Engine.vcxproj]
+  (compiling source file '../Renderer/ANSR/ANSRPass.cpp')
+  
+  AutoExposurePass.cpp
+  VulkanUtils.cpp
+  Generating Code...

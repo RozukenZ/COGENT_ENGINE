@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 #include "../Core/Graphics/GraphicsDevice.hpp"
-#include "../GBuffer.hpp"
+#include "GBuffer.hpp"
 
 class DeferredLightingPass {
 public:
@@ -11,7 +11,7 @@ public:
     ~DeferredLightingPass();
 
     // Sets up the pipeline and descriptors
-    void init();
+    void init(VkDescriptorSetLayout globalLayout); 
     
     // Updates descriptors with G-Buffer views
     void updateDescriptorSets(const GBuffer& gbuffer);
@@ -25,12 +25,14 @@ private:
 
     GraphicsDevice& device;
     VkExtent2D extent;
-    VkRenderPass renderPass; // The RenderPass this pipeline runs inside (usually Swapchain pass or separate Color pass)
+    VkRenderPass renderPass; 
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
-    VkDescriptorSetLayout descriptorSetLayout; // G-Buffer Binding
+    VkDescriptorSetLayout descriptorSetLayout; 
+    VkDescriptorSetLayout globalSetLayout;     
     VkDescriptorPool descriptorPool;
     VkDescriptorSet descriptorSet;
+    VkSampler sampler;
 };

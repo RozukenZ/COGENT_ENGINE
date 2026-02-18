@@ -34,11 +34,16 @@ private:
     void RenderLoadingScreen(AppState& currentState);
     void RenderProjectHub(AppState& currentState, bool& showCursor);
     void RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize = nullptr, glm::vec2 textureSize = {0,0});
-    void RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex);
+    void RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex, Camera& camera, std::function<void(int)> onSpawn);
+    void RenderConsole(); // [New]
     void RenderFolderBrowserModal(); 
 
     VkDescriptorPool imguiPool;
     float loadingProgress = 0.0f;
+    
+    // Console State
+    std::vector<std::string> consoleLogs;
+    bool firstRun = true; // For Docking Layout
     
     // Project Hub State
     bool showNewProjectModal = false; // Hanya flag visual

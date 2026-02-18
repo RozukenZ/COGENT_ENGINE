@@ -1,6 +1,7 @@
 #include "GBuffer.hpp"
 #include <stdexcept>
 #include "../Core/VulkanUtils.hpp"
+#include "../Core/Logger.hpp"
 
 GBuffer::GBuffer(GraphicsDevice& device, uint32_t width, uint32_t height)
     : device(device), width(width), height(height), 
@@ -164,19 +165,26 @@ void GBuffer::createAttachment(VkFormat format, VkImageUsageFlags usage, Framebu
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.usage = usage;
 
+    LOG_INFO("GBuffer: Creating Attachment with size " + std::to_string(width) + "x" + std::to_string(height));
+
     if (vkCreateImage(device.getDevice(), &imageInfo, nullptr, &attachment.image) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create G-Buffer attachment image");
     }
 
-    VkMemoryRequirements memReqs;
+    VkMemoryRequirements memReqs{};
     vkGetImageMemoryRequirements(device.getDevice(), attachment.image, &memReqs);
+    LOG_INFO("GBuffer: Image created. MemReqs Size: " + std::to_string(memReqs.size));
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memReqs.size;
     allocInfo.memoryTypeIndex = device.findMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if (vkAllocateMemory(device.getDevice(), &allocInfo, nullptr, &attachment.mem) != VK_SUCCESS) {
+    VkResult allocResult = vkAllocateMemory(device.getDevice(), &allocInfo, nullptr, &attachment.mem);
+    if (allocResult != VK_SUCCESS) {
+        LOG_ERROR("Failed to allocate G-Buffer image memory! Result: " + std::to_string(allocResult));
+        LOG_ERROR("  TypeIndex: " + std::to_string(allocInfo.memoryTypeIndex));
+        LOG_ERROR("  Size: " + std::to_string(allocInfo.allocationSize));
         throw std::runtime_error("Failed to allocate G-Buffer image memory");
     }
 

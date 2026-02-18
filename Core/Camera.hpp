@@ -76,6 +76,11 @@ public:
         updateCameraVectors();
     }
 
+    // [New] Focus on a specific point
+    void Focus(const glm::vec3& targetPosition, float distance = 5.0f) {
+        position = targetPosition - (front * distance);
+    }
+
 private:
     void updateCameraVectors() {
         // Hitung vektor depan baru

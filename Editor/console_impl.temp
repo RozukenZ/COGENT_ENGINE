@@ -1,0 +1,27 @@
+
+void EditorUI::RenderConsole() {
+    ImGui::Begin("Console");
+    if (ImGui::Button("Clear")) consoleLogs.clear();
+    ImGui::SameLine();
+    ImGui::Text("Log Count: %zu", consoleLogs.size());
+    ImGui::Separator();
+    
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& log : consoleLogs) {
+        ImVec4 color = ImVec4(1,1,1,1);
+        if (log.find("[INFO]") != std::string::npos) color = ImVec4(1,1,1,1);
+        else if (log.find("[WARN]") != std::string::npos) color = ImVec4(1,1,0,1);
+        else if (log.find("[ERROR]") != std::string::npos) color = ImVec4(1,0.4f,0.4f,1);
+        else if (log.find("[FATAL]") != std::string::npos) color = ImVec4(1,0,0,1);
+        
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        ImGui::TextUnformatted(log.c_str());
+        ImGui::PopStyleColor();
+    }
+    
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+        
+    ImGui::EndChild();
+    ImGui::End();
+}

@@ -5,7 +5,7 @@
 
 DeferredLightingPass::DeferredLightingPass(GraphicsDevice& device, VkRenderPass renderPass, VkExtent2D extent)
     : device(device), renderPass(renderPass), extent(extent) {
-    init();
+    // init is called explicitly with layout
 }
 
 DeferredLightingPass::~DeferredLightingPass() {
@@ -15,38 +15,28 @@ DeferredLightingPass::~DeferredLightingPass() {
     vkDestroyDescriptorSetLayout(device.getDevice(), descriptorSetLayout, nullptr);
 }
 
-void DeferredLightingPass::init() {
+void DeferredLightingPass::init(VkDescriptorSetLayout globalLayout) {
+    this->globalSetLayout = globalLayout; 
     createDescriptorSetLayout();
     createPipeline(renderPass);
     createDescriptorPool();
 }
 
 void DeferredLightingPass::createDescriptorSetLayout() {
-    // Bindings: Position, Normal, Albedo (Input Attachments)
-    // Note: In Deferred, we usually use INPUT_ATTACHMENT or COMBINED_IMAGE_SAMPLER.
-    // For simplicity/compatibility with Read-Only layout in RenderGraph, we use COMBINED_IMAGE_SAMPLER for now.
-    
     std::array<VkDescriptorSetLayoutBinding, 3> bindings{};
-    
-    // Binding 0: Position
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[0].pImmutableSamplers = nullptr;
     bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    // Binding 1: Normal
     bindings[1].binding = 1;
     bindings[1].descriptorCount = 1;
     bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[1].pImmutableSamplers = nullptr;
     bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    // Binding 2: Albedo
     bindings[2].binding = 2;
     bindings[2].descriptorCount = 1;
     bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[2].pImmutableSamplers = nullptr;
     bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -62,7 +52,7 @@ void DeferredLightingPass::createDescriptorSetLayout() {
 void DeferredLightingPass::createDescriptorPool() {
     std::array<VkDescriptorPoolSize, 1> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[0].descriptorCount = 3; // 3 textures
+    poolSizes[0].descriptorCount = 3; 
 
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -86,15 +76,6 @@ void DeferredLightingPass::updateDescriptorSets(const GBuffer& gbuffer) {
         throw std::runtime_error("Failed to allocate Lighting Descriptor Set!");
     }
 
-    // Update Bindings
-    // 0: Position, 1: Normal, 2: Albedo
-    // We assume GBuffer has getters for these ImageViews AND a sampler
-    
-    // HELP: GBuffer previously didn't handle Samplers explicitly or getDescriptorSet for this purpose.
-    // Ideally GBuffer exposes `getImageView(int index)`.
-    
-    // Temporary Sampler (Better: use GBuffer's or a shared one)
-    VkSampler sampler;
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_NEAREST;
@@ -104,34 +85,23 @@ void DeferredLightingPass::updateDescriptorSets(const GBuffer& gbuffer) {
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.maxAnisotropy = 1.0f;
     samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-    vkCreateSampler(device.getDevice(), &samplerInfo, nullptr, &sampler); 
-    // LEAK: Sampler leaked here for brevity, should be member or shared.
+    
+    if (vkCreateSampler(device.getDevice(), &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
+         throw std::runtime_error("Failed to create Lighting Sampler!");
+    }
 
     std::array<VkDescriptorImageInfo, 3> imageInfos{};
-    // Position
-    // Actually GBuffer class has internal structure. Let's assume we can access them via getter or friend? 
-    // Previous GBuffer had `getDescriptorSet()`. 
-    // We will bypass and assume we can pass `VkImageView` from GBuffer.
-    // For this impl, I'll rely on render graph or GBuffer public accessors.
     
-    // MOCKUP: Assuming we access raw image views (Needs GBuffer update or public access)
-    // FIX: GBuffer.hpp update needed to expose Views individually?
-    // Current GBuffer.hpp has: VkImageView getImageView(int index)? No, it has `VkFramebuffer`.
-    
-    // I will add getters to GBuffer.hpp in next step.
-
     imageInfos[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfos[0].imageView = gbuffer.getPositionImageView(); // Assuming GBuffer provides this
+    imageInfos[0].imageView = gbuffer.getPositionImageView(); 
     imageInfos[0].sampler = sampler;
 
-    // Normal
     imageInfos[1].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfos[1].imageView = gbuffer.getNormalImageView(); // Assuming GBuffer provides this
+    imageInfos[1].imageView = gbuffer.getNormalImageView(); 
     imageInfos[1].sampler = sampler;
 
-    // Albedo
     imageInfos[2].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfos[2].imageView = gbuffer.getAlbedoImageView(); // Assuming GBuffer provides this
+    imageInfos[2].imageView = gbuffer.getAlbedoImageView(); 
     imageInfos[2].sampler = sampler;
 
     std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
@@ -161,13 +131,9 @@ void DeferredLightingPass::updateDescriptorSets(const GBuffer& gbuffer) {
     descriptorWrites[2].pImageInfo = &imageInfos[2];
 
     vkUpdateDescriptorSets(device.getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-
-    // Clean up the temporary sampler (or make it a member)
-    vkDestroySampler(device.getDevice(), sampler, nullptr);
 }
 
 void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
-    // Shaders
     auto vertCode = VulkanUtils::readFile("Shaders/lighting.vert.spv");
     auto fragCode = VulkanUtils::readFile("Shaders/lighting.frag.spv");
 
@@ -188,7 +154,6 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertStageInfo, fragStageInfo };
 
-    // Vertex Input (Empty, using Fullscreen Triangle trick)
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
@@ -197,7 +162,6 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    // Viewport & Scissor (Dynamic)
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
@@ -210,23 +174,20 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; // Fullscreen quad usually CW
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE; 
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    // Depth Stencil (Disable Depth Test for Fullscreen Quad)
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_FALSE;
     depthStencil.depthWriteEnable = VK_FALSE;
 
-    // Color Blending (Standard Mix or One/One if accumulating lights)
-    // For Phase 1 simpler implementation: One pass per frame, just replace.
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; // RGBA
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; 
     colorBlendAttachment.blendEnable = VK_FALSE; 
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -235,7 +196,6 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     colorBlending.attachmentCount = 1;
     colorBlending.pAttachments = &colorBlendAttachment;
 
-    // Dynamic States
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
@@ -246,21 +206,47 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    // Pipeline Layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout; 
+    
+    std::array<VkDescriptorSetLayout, 2> setLayouts = { globalSetLayout, descriptorSetLayout };
+    pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
+    pipelineLayoutInfo.pSetLayouts = setLayouts.data(); 
 
     if (vkCreatePipelineLayout(device.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create Lighting Pipeline Layout!");
     }
     
-    // Dummy Pipeline Creation (Real implementation needs shaders)
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+    if (vkCreateGraphicsPipelines(device.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Lighting Pipeline!");
+    }
+
+    vkDestroyShaderModule(device.getDevice(), fragModule, nullptr);
+    vkDestroyShaderModule(device.getDevice(), vertModule, nullptr);
 }
 
 void DeferredLightingPass::execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-    vkCmdDraw(cmd, 3, 1, 0, 0); // Full screen triangle
+    
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneGlobalDescSet, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
+    
+    vkCmdDraw(cmd, 3, 1, 0, 0); 
 }

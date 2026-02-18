@@ -255,5 +255,14 @@ uint32_t GraphicsDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFla
             return i;
         }
     }
+    
+    // Debug logging on failure
+    LOG_ERROR("Failed to find suitable memory type!");
+    LOG_ERROR("  Requesting TypeFilter: " + std::to_string(typeFilter));
+    LOG_ERROR("  Requesting Properties: " + std::to_string(properties));
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+         LOG_ERROR("  Type " + std::to_string(i) + " Flags: " + std::to_string(memProperties.memoryTypes[i].propertyFlags));
+    }
+
     throw std::runtime_error("Failed to find suitable memory type!");
 }

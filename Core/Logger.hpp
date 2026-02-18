@@ -5,6 +5,8 @@
 #include <mutex>
 #include <chrono>
 #include <ctime>
+#include <vector>
+#include <functional>
 #include <sstream>
 
 #ifdef _WIN32
@@ -65,10 +67,20 @@ namespace Cogent::Core {
                 _logFile.flush();
             }
 
+            // Invoke Callbacks (e.g. for Editor Console)
+            for (const auto& callback : _callbacks) {
+                callback(formatted);
+            }
+
             if (level == LogLevel::FATAL) {
                 // Force crash/break
                 abort();
             }
+        }
+
+        void AddCallback(std::function<void(const std::string&)> callback) {
+            std::lock_guard<std::mutex> lock(_mutex);
+            _callbacks.push_back(callback);
         }
 
     private:
@@ -79,6 +91,7 @@ namespace Cogent::Core {
 
         std::ofstream _logFile;
         std::mutex _mutex;
+        std::vector<std::function<void(const std::string&)>> _callbacks;
 
         std::string FormatMessage(LogLevel level, const std::string& msg) {
             auto now = std::chrono::system_clock::now();

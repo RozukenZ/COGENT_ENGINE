@@ -12,6 +12,7 @@
 #include <iostream>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 #include <optional>
 #include <chrono>
 #include "imgui.h"
@@ -130,7 +131,7 @@ private:
     Model myModel;
     RenderPipeline gBufferPipeline;
     RayTracer rayTracer;
-    std::unique_ptr<DeferredLightingPass> deferredLightingPass;
+// std::unique_ptr<DeferredLightingPass> deferredLightingPass; // [DEBUG]
     std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
     VkRenderPass lightingRenderPass;
     
@@ -195,8 +196,9 @@ private:
     bool framebufferResized = false;
     
     // Constants
-    const uint32_t WIDTH = 1920;
-    const uint32_t HEIGHT = 1080;
+    // Constants
+    static constexpr uint32_t WIDTH = 1920;
+    static constexpr uint32_t HEIGHT = 1080;
     
 public:
     Camera mainCamera{glm::vec3(2.0f, 2.0f, 2.0f)}; // Public for callback access if needed, or use friend/accessor

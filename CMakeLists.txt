@@ -48,7 +48,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Graph/RenderGraph.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/DeferredLightingPass.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ShadowPass.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ShadowPass.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ScreenSpaceShadows.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Visibility/VisibilitySystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/InstanceBuffer.cpp

@@ -9,8 +9,11 @@ void CogentEngine::mouse_callback(GLFWwindow* window, double xposIn, double ypos
     auto app = reinterpret_cast<CogentEngine*>(glfwGetWindowUserPointer(window));
     if (!app) return;
 
-    if (app->showCursor) {
-        app->firstMouse = true; 
+    // [New] Only rotate if Right Mouse Button is held
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != GLFW_PRESS) {
+        app->firstMouse = true; // Reset delta when not holding right click
+        app->lastX = static_cast<float>(xposIn);
+        app->lastY = static_cast<float>(yposIn);
         return; 
     }
 
@@ -108,7 +111,8 @@ void CogentEngine::createSurface() {
 
 void CogentEngine::initResources() {
     LOG_INFO("Initializing G-Buffer...");
-    // gBuffer is initialized in constructor
+    // gBuffer is initialized in constructor, but we need to trigger init() explicitly now
+    gBuffer.init();
     
     // Initialize Streamer
     streamer = std::make_unique<Cogent::Resources::Streamer>(graphicsDevice);
@@ -150,13 +154,13 @@ void CogentEngine::initResources() {
     
     // Initialize Deferred Lighting Pass (and internal descriptors)
     // Initialize Deferred Lighting Pass (and internal descriptors)
-    deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
-    deferredLightingPass->init();
-    deferredLightingPass->updateDescriptorSets(gBuffer);
+    // deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
+    // deferredLightingPass->init(descriptorSetLayout); // [MODIFIED] Pass Global Layout
+    // deferredLightingPass->updateDescriptorSets(gBuffer);
 
     // Initialize SSS
     screenSpaceShadows = std::make_unique<ScreenSpaceShadows>(graphicsDevice, swapchainExtent);
-    screenSpaceShadows->init();
+    // screenSpaceShadows->init(); // Removed: Called in constructor
     screenSpaceShadows->updateDescriptorSets(gBuffer.getDepthImageView(), textureSampler, uniformBuffer);
 
     LOG_INFO("Resources Initialized Successfully!");
@@ -175,9 +179,37 @@ void CogentEngine::initResources() {
     LOG_INFO("Initializing Ray Tracer...");
     rayTracer.init(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), graphicsDevice.getCommandPool(), graphicsDevice.getGraphicsQueue(), swapchainExtent);
 
-    LOG_INFO("Spawning Initial Objects...");
-    spawnObject(0, glm::vec3(0.0f, 0.0f, 0.0f));  
-    spawnObject(1, glm::vec3(2.5f, 0.0f, 0.0f));  
+    LOG_INFO("Spawning Demo Scene...");
+    
+    // 1. Center Cube (White Texture)
+    spawnObject(0, glm::vec3(0.0f, 0.0f, 0.0f)); 
+    
+    // 2. Surrounding Lights (Spheres with Bright Colors)
+    // We use meshID 1 (Sphere) and manually set color/name
+    
+    // Right (Red)
+    spawnObject(1, glm::vec3(2.5f, 0.0f, 0.0f));
+    gameObjects.back().name = "Light_Red";
+    gameObjects.back().color = glm::vec4(2.0f, 0.2f, 0.2f, 1.0f); // >1.0 for manual bloom/emissive look if supported, else just bright
+    
+    // Left (Blue)
+    spawnObject(1, glm::vec3(-2.5f, 0.0f, 0.0f));
+    gameObjects.back().name = "Light_Blue";
+    gameObjects.back().color = glm::vec4(0.2f, 0.2f, 2.0f, 1.0f);
+
+    // Front (Green)
+    spawnObject(1, glm::vec3(0.0f, 2.5f, 0.0f)); // Y is Up/Forward depending on coord system. Vulkan Y is down, Z is depth? 
+    // Let's assume Z is depth for now based on previous camera setup
+    gameObjects.back().name = "Light_Green";
+    gameObjects.back().color = glm::vec4(0.2f, 2.0f, 0.2f, 1.0f);
+
+    // Back (Yellow) - Adjusted position to be visible
+    spawnObject(1, glm::vec3(0.0f, -2.5f, 0.0f));
+    gameObjects.back().name = "Light_Yellow";
+    gameObjects.back().color = glm::vec4(2.0f, 2.0f, 0.2f, 1.0f);
+    
+    // Sun
+    spawnObject(3, glm::vec3(0.0f, 5.0f, 5.0f));
 }
 
 void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
@@ -228,20 +260,13 @@ void CogentEngine::mainLoop() {
             showCursor = true;
         }
         else {
-            bool currentCtrlState = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
-            if (currentCtrlState && !lastCtrlState) {
-                showCursor = !showCursor;
-                
-                if (showCursor) {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                } else {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-                    firstMouse = true;
-                }
-            }
-            lastCtrlState = currentCtrlState;
-
-            if (!showCursor) {
+            // [New] Editor Mode: Always show cursor, allow movement
+            showCursor = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            
+            // Allow keyboard movement even if cursor is visible (WASD)
+            // But NOT if ImGui wants input (typing in text box)
+            if (!ImGui::GetIO().WantCaptureKeyboard) {
                 mainCamera.processKeyboard(window, deltaTime);
             }
         }
@@ -866,16 +891,18 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         scissor.offset = {0, 0};
         scissor.extent = swapchainExtent;
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline.getPipeline());
         
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
             gBufferPipeline.getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
             gBufferPipeline.getPipelineLayout(), 1, 1, &textureDescriptorSet, 0, nullptr);
 
+
         for (const auto& obj : gameObjects) {
+            // LOG_INFO("recordCommandBuffer: Drawing Object " + obj.name);
             ObjectPushConstant pc = obj.getPushConstant(); 
             vkCmdPushConstants(
                 commandBuffer, 
@@ -888,13 +915,19 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
 
             if (obj.id >= 0 && obj.id < meshes.size()) {
                 meshes[obj.id].draw(commandBuffer);
+            } else {
+                 LOG_ERROR("Invalid Mesh ID: " + std::to_string(obj.id));
             }
         }
 
     vkCmdEndRenderPass(commandBuffer);
 
-
     std::array<VkImageMemoryBarrier, 2> barriers{};
+
+    if (!screenSpaceShadows) {
+        LOG_ERROR("FATAL: screenSpaceShadows is NULL!");
+        throw std::runtime_error("screenSpaceShadows is NULL");
+    }
 
     barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barriers[0].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; 
@@ -990,6 +1023,9 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
 
         VkImageMemoryBarrier sssBarriers[] = { sssImageBarrier, depthBarrier };
 
+        if (sssImageBarrier.image == VK_NULL_HANDLE) LOG_ERROR("FATAL: SSS Image is NULL!");
+        if (depthBarrier.image == VK_NULL_HANDLE) LOG_ERROR("FATAL: Depth Image is NULL!");
+
         vkCmdPipelineBarrier(
             commandBuffer,
             VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -1011,9 +1047,16 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         sssBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
         sssBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
         sssBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        
         vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 1, &sssBarrier, 0, nullptr, 0, nullptr);
 
         // --- 2. Deferred Lighting Pass ---
+
+        if (lightRenderPassInfo.renderPass == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting RenderPass is NULL!");
+        if (lightRenderPassInfo.framebuffer == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting Framebuffer is NULL!");
+
+        if (lightRenderPassInfo.renderPass == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting RenderPass is NULL!");
+        if (lightRenderPassInfo.framebuffer == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting Framebuffer is NULL!");
 
         vkCmdBeginRenderPass(commandBuffer, &lightRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1037,12 +1080,18 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         scissorFullscreen.offset = {0, 0};
         scissorFullscreen.extent = {(uint32_t)vpWidth, (uint32_t)vpHeight};
         vkCmdSetScissor(commandBuffer, 0, 1, &scissorFullscreen);
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissorFullscreen);
 
         // Execute Lighting Pass (Fullscreen Quad)
         // Pass the Global UBO (Camera) descriptor set if needed, or scene descriptor.
         // The DeferredLightingPass::execute signature might need checking. 
         // Checked header: void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet);
-        deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
+        if (false /*!deferredLightingPass*/) {
+             LOG_ERROR("FATAL: deferredLightingPass is NULL!");
+             throw std::runtime_error("deferredLightingPass is NULL");
+        }
+        
+        // deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
 
         editorUI.Draw(commandBuffer);
 

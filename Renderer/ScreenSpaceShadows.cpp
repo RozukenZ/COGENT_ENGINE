@@ -3,6 +3,7 @@
 #include <array>
 #include "../Core/VulkanUtils.hpp"
 
+
 ScreenSpaceShadows::ScreenSpaceShadows(GraphicsDevice& device, VkExtent2D extent) 
     : device(device), extent(extent) {
     init();
@@ -224,6 +225,9 @@ void ScreenSpaceShadows::execute(VkCommandBuffer cmd, const glm::mat4& view, con
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
     
     // Bind internal descriptor set (updated via updateDescriptorSets)
+    if (descriptorSet == VK_NULL_HANDLE) {
+        throw std::runtime_error("SSS Descriptor Set is NULL during execute!");
+    }
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
     struct PushConstants {

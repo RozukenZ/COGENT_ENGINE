@@ -1,12 +1,13 @@
-#include "EditorUI.hpp"
+﻿#include "EditorUI.hpp"
 #include <array>
 #include <iostream>
 #include <cmath>
 #include "ImGuizmo.h"
+#include "imgui_internal.h"
 #include <glm/gtc/type_ptr.hpp>
-#include "Types.hpp"
-#include "Camera.hpp"
-#include "Logger.hpp" // [NEW] Include Logger
+#include "../Core/Types.hpp"
+#include "../Core/Camera.hpp"
+#include "../Core/Logger.hpp"
 
 namespace fs = std::filesystem;
 
@@ -47,6 +48,15 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
 
     // 3. Apply Ultra Modern Theme
     ApplyModernDarkTheme();
+
+    // 4. Subscribe to Logger
+    Cogent::Core::Logger::Get().AddCallback([this](const std::string& msg) {
+        consoleLogs.push_back(msg);
+        if (consoleLogs.size() > 1000) {
+            consoleLogs.erase(consoleLogs.begin());
+        }
+    });
+}
 
     // 4. Setup Backend
     ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -348,7 +358,7 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
     ImGui::SetCursorPos(ImVec2(40, ImGui::GetWindowHeight() - 60));
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.55f, 1.0f));
     ImGui::Text("Version 1.0.0");
-    ImGui::Text("© 2026 Cogent Studios");
+    ImGui::Text("Â© 2026 Cogent Studios");
     ImGui::PopStyleColor();
     
     ImGui::EndChild();
@@ -652,7 +662,7 @@ void EditorUI::RenderFolderBrowserModal() {
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
         
         // Tombol UP
-        if (ImGui::Button("⬆UP", ImVec2(70, 32))) {
+        if (ImGui::Button("â¬†UP", ImVec2(70, 32))) {
             try {
                 fs::path p = currentPath;
                 if (p.has_parent_path() && p != p.root_path()) {
@@ -780,7 +790,7 @@ void EditorUI::RenderFolderBrowserModal() {
         
         // Tombol Select
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
-        if (ImGui::Button("✓ SELECT THIS FOLDER", ImVec2(buttonWidth, 40))) {
+        if (ImGui::Button("âœ“ SELECT THIS FOLDER", ImVec2(buttonWidth, 40))) {
             selectedPath = currentPath; // Simpan path ke variabel utama
             showFolderBrowser = false;  // Tutup browser
         }
@@ -801,7 +811,36 @@ void EditorUI::RenderFolderBrowserModal() {
    void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize, glm::vec2 textureSize) {
     
     // 1. Setup DockSpace
-    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+
+    if (firstRun) {
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+        ImGuiID dock_main_id = dockspace_id;
+        ImGuiID dock_up;
+        ImGuiID dock_down;
+        ImGuiID dock_left;
+        ImGuiID dock_right;
+
+        // Split Layout
+        ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.25f, &dock_down, &dock_up);
+        ImGui::DockBuilderSplitNode(dock_up, ImGuiDir_Left, 0.2f, &dock_left, &dock_main_id);
+        ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, &dock_right, &dock_main_id);
+
+        // Dock Windows
+        ImGui::DockBuilderDockWindow("Scene View", dock_main_id);
+        ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
+        ImGui::DockBuilderDockWindow("Inspector", dock_right);
+        ImGui::DockBuilderDockWindow("Console", dock_down);
+        ImGui::DockBuilderDockWindow("Toolbar", dock_up); // Put toolbar on top if possible or floating
+
+        ImGui::DockBuilderFinish(dockspace_id);
+        firstRun = false;
+    }
+
+    ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 
     // [FIX] Define Gizmo Variables
     static ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
@@ -838,6 +877,10 @@ void EditorUI::RenderFolderBrowserModal() {
         if(ImGui::Button("PLAY", ImVec2(60, 30))) {}
         ImGui::SameLine();
         if(ImGui::Button("STOP", ImVec2(60, 30))) {}
+        
+        // [New] Debug Coordinates
+        ImGui::SameLine();
+        ImGui::Text(" | Camera: %.1f, %.1f, %.1f", camera.position.x, camera.position.y, camera.position.z);
     ImGui::End();
 
     // 4. Scene View (The Central Node)
@@ -971,12 +1014,37 @@ void EditorUI::RenderFolderBrowserModal() {
     ImGui::End();
 
     // 6. Hierarchy Panel
-    RenderHierarchy(gameObjects, selectedIndex);
+    RenderHierarchy(gameObjects, selectedIndex, camera, onSpawn);
+
+    // 7. Console Panel
+    RenderConsole();
 }
 
 // Tambahkan parameter list object dan index yang dipilih
-void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex) {
+void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex, Camera& camera, std::function<void(int)> onSpawn) {
     ImGui::Begin("Hierarchy");
+    
+    // [New] Explicit Create Button
+    if (ImGui::Button("Add Object +", ImVec2(-1, 0))) {
+        ImGui::OpenPopup("HierarchyContextMenu");
+    }
+    ImGui::Separator();
+    
+    // [New] Context Menu
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered()) {
+        ImGui::OpenPopup("HierarchyContextMenu");
+    }
+
+    if (ImGui::BeginPopup("HierarchyContextMenu")) {
+        ImGui::Text("Create Object");
+        ImGui::Separator();
+        if (ImGui::MenuItem("Cube")) { if(onSpawn) onSpawn(0); }
+        if (ImGui::MenuItem("Sphere")) { if(onSpawn) onSpawn(1); }
+        if (ImGui::MenuItem("Capsule")) { if(onSpawn) onSpawn(2); } 
+        ImGui::Separator();
+        if (ImGui::MenuItem("Sun Light")) { if(onSpawn) onSpawn(3); } 
+        ImGui::EndPopup();
+    }
     // Loop semua object
     for (int i = 0; i < objects.size(); i++) {
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
@@ -988,11 +1056,42 @@ void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIn
 
         if (ImGui::IsItemClicked()) {
             selectedIndex = i;
+            
+            // [New] Focus Camera on Click
+            glm::vec3 objPos = glm::vec3(objects[i].model[3]);
+            camera.Focus(objPos, 5.0f);
         }
     }
     // Klik area kosong untuk unselect
     if (ImGui::IsMouseDown(0) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
         selectedIndex = -1;
     }
+    ImGui::End();
+}
+
+void EditorUI::RenderConsole() {
+    ImGui::Begin("Console");
+    if (ImGui::Button("Clear")) consoleLogs.clear();
+    ImGui::SameLine();
+    ImGui::Text("Log Count: %zu", consoleLogs.size());
+    ImGui::Separator();
+    
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& log : consoleLogs) {
+        ImVec4 color = ImVec4(1,1,1,1);
+        if (log.find("[INFO]") != std::string::npos) color = ImVec4(1,1,1,1);
+        else if (log.find("[WARN]") != std::string::npos) color = ImVec4(1,1,0,1);
+        else if (log.find("[ERROR]") != std::string::npos) color = ImVec4(1,0.4f,0.4f,1);
+        else if (log.find("[FATAL]") != std::string::npos) color = ImVec4(1,0,0,1);
+        
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        ImGui::TextUnformatted(log.c_str());
+        ImGui::PopStyleColor();
+    }
+    
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+        
+    ImGui::EndChild();
     ImGui::End();
 }
