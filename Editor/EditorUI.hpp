@@ -24,6 +24,9 @@ public:
               VkDevice device, uint32_t queueFamily, VkQueue queue, 
               VkRenderPass renderPass, uint32_t minImageCount);
 
+    // [New] Check if Scene View is focused for Input
+    bool isSceneViewFocused = false;
+
     void Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture = VK_NULL_HANDLE, std::function<void(int)> onSpawn = nullptr, glm::vec2* outSceneSize = nullptr, glm::vec2 textureSize = {0,0});
     void Draw(VkCommandBuffer commandBuffer);
     void Cleanup(VkDevice device);

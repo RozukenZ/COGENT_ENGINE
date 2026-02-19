@@ -56,7 +56,6 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
             consoleLogs.erase(consoleLogs.begin());
         }
     });
-}
 
     // 4. Setup Backend
     ImGui_ImplGlfw_InitForVulkan(window, true);
@@ -886,7 +885,10 @@ void EditorUI::RenderFolderBrowserModal() {
     // 4. Scene View (The Central Node)
     // We render the texture here!
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0)); // No padding for image
-    ImGui::Begin("Scene View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::Begin("Scene View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBackground);
+        
+        // [New] Input Logic
+        isSceneViewFocused = ImGui::IsWindowFocused();
         // Get Window Size for Aspect Ratio
         ImVec2 windowSize = ImGui::GetContentRegionAvail();
         

@@ -131,7 +131,7 @@ private:
     Model myModel;
     RenderPipeline gBufferPipeline;
     RayTracer rayTracer;
-// std::unique_ptr<DeferredLightingPass> deferredLightingPass; // [DEBUG]
+    std::unique_ptr<DeferredLightingPass> deferredLightingPass;
     std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
     VkRenderPass lightingRenderPass;
     

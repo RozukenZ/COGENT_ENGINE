@@ -93,6 +93,12 @@ struct CameraUBO {
     // 4. Extra Data
     alignas(16) float deltaTime;      // Time between frames (physics/anim speed)
     float padding[3];                 // Padding to ensure structure alignment
+
+    // 5. Global Light Data (Sun)
+    alignas(16) glm::vec3 lightDirection;
+    alignas(16) glm::vec3 lightColor;
+    float lightIntensity;
+    float padding2[3]; // Padding for 16-byte alignment
 };
 
 // ==========================================

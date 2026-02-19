@@ -16,9 +16,11 @@ layout(location = 4) out vec4 prevPos;
 layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 view;
     mat4 proj;
-    vec3 viewPos;
     mat4 prevView; 
-    mat4 prevProj; 
+    mat4 prevProj;
+    vec3 viewPos; 
+    float time;
+    float deltaTime;
 } ubo;
 
 layout(push_constant) uniform PushConsts {

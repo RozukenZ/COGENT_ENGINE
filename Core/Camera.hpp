@@ -22,11 +22,11 @@ public:
     float movementSpeed;
     float mouseSensitivity;
 
-    Camera(glm::vec3 startPosition = glm::vec3(0.0f, 0.0f, 3.0f)) {
+    Camera(glm::vec3 startPosition = glm::vec3(0.0f, 5.0f, 5.0f)) {
         position = startPosition;
         worldUp = glm::vec3(0.0f, 0.0f, 1.0f); // Z is Up in Vulkan (custom coordinate)
         yaw = -90.0f;
-        pitch = 0.0f;
+        pitch = -45.0f;
         movementSpeed = 2.5f;
         mouseSensitivity = 0.1f;
         updateCameraVectors();

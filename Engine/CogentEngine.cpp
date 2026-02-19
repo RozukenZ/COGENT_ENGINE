@@ -9,8 +9,8 @@ void CogentEngine::mouse_callback(GLFWwindow* window, double xposIn, double ypos
     auto app = reinterpret_cast<CogentEngine*>(glfwGetWindowUserPointer(window));
     if (!app) return;
 
-    // [New] Only rotate if Right Mouse Button is held
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) != GLFW_PRESS) {
+    // [New] Only rotate if Middle Mouse Button (Scroll) is held
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) != GLFW_PRESS) {
         app->firstMouse = true; // Reset delta when not holding right click
         app->lastX = static_cast<float>(xposIn);
         app->lastY = static_cast<float>(yposIn);
@@ -154,9 +154,9 @@ void CogentEngine::initResources() {
     
     // Initialize Deferred Lighting Pass (and internal descriptors)
     // Initialize Deferred Lighting Pass (and internal descriptors)
-    // deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
-    // deferredLightingPass->init(descriptorSetLayout); // [MODIFIED] Pass Global Layout
-    // deferredLightingPass->updateDescriptorSets(gBuffer);
+    deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
+    deferredLightingPass->init(descriptorSetLayout); // [MODIFIED] Pass Global Layout
+    deferredLightingPass->updateDescriptorSets(gBuffer);
 
     // Initialize SSS
     screenSpaceShadows = std::make_unique<ScreenSpaceShadows>(graphicsDevice, swapchainExtent);
@@ -265,8 +265,9 @@ void CogentEngine::mainLoop() {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             
             // Allow keyboard movement even if cursor is visible (WASD)
-            // But NOT if ImGui wants input (typing in text box)
-            if (!ImGui::GetIO().WantCaptureKeyboard) {
+            // Allow keyboard movement if Scene View is Focused OR if ImGui doesn't want keyboard (fallback)
+            // But prioritizing Scene View Focus ensures WASD works even if ImGui technically "captured" it (e.g. navigation)
+            if (editorUI.isSceneViewFocused || !ImGui::GetIO().WantCaptureKeyboard) {
                 mainCamera.processKeyboard(window, deltaTime);
             }
         }
@@ -721,6 +722,12 @@ void CogentEngine::updateUniformBuffer() {
     ubo.time = time;
     ubo.deltaTime = deltaTime;
 
+    // Hardcoded Sun for now (to debug "No Lighting")
+    // Direction: Downwards and angled (-1, -1, -1)
+    ubo.lightDirection = glm::normalize(glm::vec3(0.5f, -1.0f, -0.5f)); 
+    ubo.lightColor = glm::vec3(1.0f, 0.95f, 0.8f); // Warm Sun
+    ubo.lightIntensity = 2.0f;
+
     memcpy(uniformBufferMapped, &ubo, sizeof(ubo));
 }
 
@@ -866,9 +873,9 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
     renderPassInfo.renderArea.extent = swapchainExtent;
 
     std::array<VkClearValue, 4> clearValues{};
-    clearValues[0].color = {{0.53f, 0.81f, 0.92f, 1.0f}}; 
-    clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
-    clearValues[2].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
+    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Position (Clear to 0)
+    clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Normal
+    clearValues[2].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Albedo (Clear to Black, usually)
     clearValues[3].depthStencil = {1.0f, 0};           
 
     renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -902,8 +909,8 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
 
 
         for (const auto& obj : gameObjects) {
-            // LOG_INFO("recordCommandBuffer: Drawing Object " + obj.name);
-            ObjectPushConstant pc = obj.getPushConstant(); 
+             // LOG_INFO("recordCommandBuffer: Drawing Object " + obj.name + " MeshID: " + std::to_string(obj.meshID));
+            ObjectPushConstant pc = obj.getPushConstant();  
             vkCmdPushConstants(
                 commandBuffer, 
                 gBufferPipeline.getPipelineLayout(), 
@@ -913,16 +920,16 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
                 &pc
             );
 
-            if (obj.id >= 0 && obj.id < meshes.size()) {
-                meshes[obj.id].draw(commandBuffer);
+            if (obj.meshID >= 0 && obj.meshID < meshes.size()) {
+                meshes[obj.meshID].draw(commandBuffer);
             } else {
-                 LOG_ERROR("Invalid Mesh ID: " + std::to_string(obj.id));
+                 LOG_ERROR("Invalid Mesh ID: " + std::to_string(obj.meshID));
             }
         }
 
     vkCmdEndRenderPass(commandBuffer);
 
-    std::array<VkImageMemoryBarrier, 2> barriers{};
+    std::array<VkImageMemoryBarrier, 3> barriers{};
 
     if (!screenSpaceShadows) {
         LOG_ERROR("FATAL: screenSpaceShadows is NULL!");
@@ -955,7 +962,22 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
     barriers[1].subresourceRange.baseArrayLayer = 0;
     barriers[1].subresourceRange.layerCount = 1;
     barriers[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barriers[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barriers[2].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    barriers[2].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barriers[2].image = gBuffer.getPositionImage();
+    barriers[2].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barriers[2].subresourceRange.baseMipLevel = 0;
+    barriers[2].subresourceRange.levelCount = 1;
+    barriers[2].subresourceRange.baseArrayLayer = 0;
+    barriers[2].subresourceRange.layerCount = 1;
+    barriers[2].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     vkCmdPipelineBarrier(
         commandBuffer,
@@ -1086,12 +1108,12 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         // Pass the Global UBO (Camera) descriptor set if needed, or scene descriptor.
         // The DeferredLightingPass::execute signature might need checking. 
         // Checked header: void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet);
-        if (false /*!deferredLightingPass*/) {
+        if (!deferredLightingPass) {
              LOG_ERROR("FATAL: deferredLightingPass is NULL!");
              throw std::runtime_error("deferredLightingPass is NULL");
         }
         
-        // deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
+        deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
 
         editorUI.Draw(commandBuffer);
 
