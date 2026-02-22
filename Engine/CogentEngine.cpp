@@ -209,7 +209,7 @@ void CogentEngine::initResources() {
     gameObjects.back().color = glm::vec4(2.0f, 2.0f, 0.2f, 1.0f);
     
     // Sun
-    spawnObject(3, glm::vec3(0.0f, 5.0f, 5.0f));
+    // Sun is a sphere (meshID=1, handled specially inside spawnObject)
 }
 
 void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
@@ -227,15 +227,11 @@ void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
     if (meshID == 0) obj.name = "Cube " + std::to_string(obj.id);
     else if (meshID == 1) obj.name = "Sphere " + std::to_string(obj.id);
     else if (meshID == 2) obj.name = "Capsule " + std::to_string(obj.id);
-    else if (meshID == 3) { 
-        obj.name = "Sun";
-        obj.color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f); 
-        obj.meshID = 1; 
-    }
     else obj.name = "Object " + std::to_string(obj.id);
     
     obj.model = glm::translate(glm::mat4(1.0f), position);
-    obj.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
+    if (obj.color == glm::vec4(0.0f)) // Only set default if not already set
+        obj.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
 
     gameObjects.push_back(obj);
     selectedObjectIndex = obj.id;
@@ -707,7 +703,7 @@ void CogentEngine::updateUniformBuffer() {
     CameraUBO ubo{};
     ubo.view = mainCamera.getViewMatrix();
     ubo.proj = mainCamera.getProjectionMatrix(renderingViewportSize.x / renderingViewportSize.y);
-    ubo.proj[1][1] *= -1; // Vulkan flip Y
+    // NOTE: Y-flip already done inside Camera::getProjectionMatrix()
 
     // For TAA, we should store previous matrices. For now, just use current.
     static glm::mat4 lastView = ubo.view;
