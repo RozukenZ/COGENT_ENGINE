@@ -181,10 +181,14 @@ void CogentEngine::initResources() {
     lightCulling = std::make_unique<LightCulling>(graphicsDevice, *pipelineCache);
     lightCulling->init(swapchainExtent, 1024); // max 1024 lights
 
+    // Initialize SSAO
+    ssao = std::make_unique<Cogent::Renderer::SSAO>(graphicsDevice, *pipelineCache, swapchainExtent);
+    ssao->updateDescriptorSets(gBuffer.getPositionImageView(), gBuffer.getNormalImageView(), uniformBuffer);
+
     // Initialize Deferred Lighting Pass (and internal descriptors)
     deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, hdrPipeline->getHDRRenderPass(), swapchainExtent);
     deferredLightingPass->init(descriptorSetLayout, lightCulling->getDescriptorSetLayout()); // [MODIFIED] Pass cluster Layout
-    deferredLightingPass->updateDescriptorSets(gBuffer);
+    deferredLightingPass->updateDescriptorSets(gBuffer, ssao->getSSAOOutputView());
 
     // Initialize SSS
     screenSpaceShadows = std::make_unique<ScreenSpaceShadows>(graphicsDevice, swapchainExtent);
@@ -922,10 +926,15 @@ void CogentEngine::buildRenderGraph() {
     renderGraph->registerImage("GBuffer_Albedo", gBuffer.getAlbedoImage(), gBuffer.getAlbedoImageView(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     renderGraph->registerImage("GBuffer_Normal", gBuffer.getNormalImage(), gBuffer.getNormalImageView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     renderGraph->registerImage("GBuffer_Position", gBuffer.getPositionImage(), gBuffer.getPositionImageView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    renderGraph->registerImage("GBuffer_Material", gBuffer.getMaterialImage(), gBuffer.getMaterialImageView(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     renderGraph->registerImage("GBuffer_Depth", gBuffer.getDepthImage(), gBuffer.getDepthImageView(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     
     if (screenSpaceShadows) {
         renderGraph->registerImage("SSS_Mask", screenSpaceShadows->getImage(), screenSpaceShadows->getOutputView(), VK_FORMAT_R8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
+    }
+    
+    if (ssao) {
+        renderGraph->registerImage("SSAO_Mask", ssao->getSSAOOutputImage(), ssao->getSSAOOutputView(), VK_FORMAT_R8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
     }
 
     RenderPassNode gbufferPass{};
@@ -934,6 +943,7 @@ void CogentEngine::buildRenderGraph() {
         {"GBuffer_Albedo", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Normal", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Position", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+        {"GBuffer_Material", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Depth", VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT}
     };
     gbufferPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
@@ -944,11 +954,12 @@ void CogentEngine::buildRenderGraph() {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapchainExtent;
 
-        std::array<VkClearValue, 4> clearValues{};
+        std::array<VkClearValue, 5> clearValues{};
         clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
         clearValues[2].color = {{editorUI.sceneBackgroundColor.x, editorUI.sceneBackgroundColor.y, editorUI.sceneBackgroundColor.z, 1.0f}}; 
-        clearValues[3].depthStencil = {1.0f, 0};           
+        clearValues[3].color = {{0.0f, 0.5f, 1.0f, 1.0f}}; // R=Metallic, G=Roughness, B=AO
+        clearValues[4].depthStencil = {1.0f, 0};           
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
@@ -1009,6 +1020,33 @@ void CogentEngine::buildRenderGraph() {
         }
     };
 
+    RenderPassNode ssaoPass{};
+    ssaoPass.name = "SSAO Pass";
+    ssaoPass.inputs = {
+        {"GBuffer_Position", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
+        {"GBuffer_Normal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    // Note: SSAO_Raw isn't fully registered in the render graph yet, since it's internal to SSAO class.
+    // For simplicity, we just execute the compute shader, which internally writes to SSAO_Raw and then SSAO_Mask.
+    // We will just expose SSAO_Mask to the graph. Wait, if SSAO does both in one pass, let's call it SSAO Compute.
+    ssaoPass.outputs = {
+        {"SSAO_Mask", VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    ssaoPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        if (ssao) {
+            ssao->executeSSAO(cmd);
+            
+            // Memory barrier between SSAO and Blur
+            VkMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+            
+            ssao->executeSSAOBlur(cmd);
+        }
+    };
+
     RenderPassNode lightCullPass{};
     lightCullPass.name = "Light Culling";
     lightCullPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
@@ -1034,7 +1072,9 @@ void CogentEngine::buildRenderGraph() {
         {"GBuffer_Albedo", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
         {"GBuffer_Normal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
         {"GBuffer_Position", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
-        {"SSS_Mask", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
+        {"GBuffer_Material", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
+        {"SSS_Mask", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
+        {"SSAO_Mask", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
     };
     lightingPass.outputs = {
         {"HDR_Color", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}
@@ -1134,6 +1174,7 @@ void CogentEngine::buildRenderGraph() {
 
     renderGraph->addPass(gbufferPass);
     renderGraph->addPass(sssPass);
+    renderGraph->addPass(ssaoPass);
     renderGraph->addPass(lightCullPass);
     renderGraph->addPass(lightingPass);
     renderGraph->addPass(bloomPass);

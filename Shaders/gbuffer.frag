@@ -6,13 +6,23 @@ layout(location = 1) in vec3 fragColor;
 layout(location = 2) in vec3 fragNormal;
 layout(location = 3) in vec2 fragTexCoord;
 
-// OUTPUT TO G-BUFFER (Must match GBuffer attachment order: 0=Position, 1=Normal, 2=Albedo)
+// OUTPUT TO G-BUFFER (Must match GBuffer attachment order: 0=Position, 1=Normal, 2=Albedo, 3=Material)
 layout(location = 0) out vec4 outPosition;
 layout(location = 1) out vec4 outNormal;
 layout(location = 2) out vec4 outAlbedo;
+layout(location = 3) out vec4 outMaterial;
 
 // INPUT TEXTURE (SET 1)
 layout(set = 1, binding = 0) uniform sampler2D texSampler;
+
+// PUSH CONSTANT (Must match ObjectPushConstant in C++)
+layout(push_constant) uniform PushConstants {
+    mat4 model;
+    vec4 color;
+    int id;
+    float metallic;
+    float roughness;
+} pc;
 
 void main() {
     // 1. POSITION: World-space position for Deferred Lighting
@@ -24,4 +34,7 @@ void main() {
     // 3. ALBEDO: Object color * texture
     vec4 texColor = texture(texSampler, fragTexCoord);
     outAlbedo = vec4(fragColor * texColor.rgb, texColor.a);
+    
+    // 4. MATERIAL: R=Metallic, G=Roughness, B=AO, A=Unused
+    outMaterial = vec4(pc.metallic, pc.roughness, 1.0, 1.0);
 }

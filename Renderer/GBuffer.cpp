@@ -26,23 +26,24 @@ void GBuffer::init() {
     createAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, position);
     createAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, normal);
     createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, albedo);
+    createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, material);
     
-    // Depth attachment (using GraphicsDevice helper if available, but for now logic is here)
-    // Assuming D32_SFLOAT for simplicity, ideally queried from device
+    // Depth attachment
     createAttachment(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depth);
 
     // Populate attachments vector for easy access
-    attachments.resize(4);
+    attachments.resize(5);
     attachments[0] = position;
     attachments[1] = normal;
     attachments[2] = albedo;
-    attachments[3] = depth;
+    attachments[3] = material;
+    attachments[4] = depth;
 
     // 2. Create Render Pass
-    std::array<VkAttachmentDescription, 4> attachments = {};
+    std::array<VkAttachmentDescription, 5> attachments = {};
     
     // Common Color Attachment Setup
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 4; ++i) {
         attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
         attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -54,27 +55,29 @@ void GBuffer::init() {
     attachments[0].format = position.format;
     attachments[1].format = normal.format;
     attachments[2].format = albedo.format;
+    attachments[3].format = material.format;
 
     // Depth Setup
-    attachments[3].format = depth.format;
-    attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[3].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    attachments[4].format = depth.format;
+    attachments[4].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[4].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
-    VkAttachmentReference colorRefs[3] = {
+    VkAttachmentReference colorRefs[4] = {
         {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
         {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-        {2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+        {2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        {3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
     };
-    VkAttachmentReference depthRef = {3, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+    VkAttachmentReference depthRef = {4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 3;
+    subpass.colorAttachmentCount = 4;
     subpass.pColorAttachments = colorRefs;
     subpass.pDepthStencilAttachment = &depthRef;
 
@@ -110,7 +113,7 @@ void GBuffer::init() {
     }
 
     // 3. Create Framebuffer
-    std::array<VkImageView, 4> attachViews = { position.view, normal.view, albedo.view, depth.view };
+    std::array<VkImageView, 5> attachViews = { position.view, normal.view, albedo.view, material.view, depth.view };
     VkFramebufferCreateInfo fbufInfo = {};
     fbufInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fbufInfo.renderPass = renderPass;
@@ -223,6 +226,7 @@ void GBuffer::cleanup() {
     destroyAttach(position);
     destroyAttach(normal);
     destroyAttach(albedo);
+    destroyAttach(material);
     destroyAttach(depth);
     
     attachments.clear();

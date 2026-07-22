@@ -114,7 +114,9 @@ struct ObjectPushConstant {
     glm::mat4 model;
     alignas(16) glm::vec4 color; // Default color (RGBA) -> Color Wheel control
     int id; // Selection ID
-    int padding[3]; // Padding for 16-byte alignment if needed
+    float metallic;
+    float roughness;
+    int padding; // Padding for 16-byte alignment
 };
 
 // ==========================================
@@ -134,8 +136,12 @@ struct GameObject {
     glm::mat4 model;        // Transform model (position, rotation, scale)
     glm::vec4 color;        // Color for editor visualization
     int id;                 // Unique ID for picking
-    int meshID;             // [FIX] Added meshID to identify mesh type (0=Cube, 1=Sphere, etc.)
+    int meshID;             // Added meshID to identify mesh type (0=Cube, 1=Sphere, etc.)
     
+    // PBR Properties
+    float metallic = 0.0f;
+    float roughness = 0.5f;
+
     // Bounding Volume (World Space) - Updated when model matrix changes
     // Using a simple struct or including Frustum header if safely forward declared.
     // To avoid header cycles, we define struct here or use glm::vec3 min/max directly.
@@ -146,6 +152,9 @@ struct GameObject {
         ObjectPushConstant pc{};
         pc.model = model;
         pc.color = color;
+        pc.id = id;
+        pc.metallic = metallic;
+        pc.roughness = roughness;
         return pc;
     }
 };

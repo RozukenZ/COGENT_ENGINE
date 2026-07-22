@@ -1,0 +1,98 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D samplerPosition;
+layout(set = 0, binding = 1) uniform sampler2D samplerNormal;
+layout(set = 0, binding = 2) uniform sampler2D samplerNoise;
+
+layout(set = 0, binding = 3) uniform KernelUBO {
+    vec4 samples[64];
+} ubo;
+
+layout(set = 0, binding = 4, r8) uniform writeonly image2D outSSAO;
+
+layout(set = 0, binding = 5) uniform GlobalUBO {
+    mat4 view;
+    mat4 proj;
+    mat4 prevView;
+    mat4 prevProj;
+    vec3 viewPos;
+    float time;
+    float deltaTime;
+    float _pad1;
+    float _pad2;
+    float _pad3;
+    vec3 lightDirection;
+    float _pad4;
+    vec3 lightColor;
+    float lightIntensity;
+    uvec4 gridDimensions;
+    vec2 screenDimensions;
+    float zNear;
+    float zFar;
+} globalUbo;
+
+layout(push_constant) uniform PushConstants {
+    vec2 screenDim;
+} pc;
+
+const int kernelSize = 64;
+const float radius = 0.5;
+const float bias = 0.025;
+
+void main() {
+    ivec2 texCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (texCoord.x >= uint(pc.screenDim.x) || texCoord.y >= uint(pc.screenDim.y))
+        return;
+        
+    vec2 inUV = (vec2(texCoord) + 0.5) / pc.screenDim;
+    
+    // Get world-space position and normal
+    vec3 worldPos = texture(samplerPosition, inUV).xyz;
+    vec3 worldNormal = texture(samplerNormal, inUV).xyz;
+    
+    if (length(worldNormal) < 0.01) {
+        imageStore(outSSAO, texCoord, vec4(1.0));
+        return;
+    }
+
+    // Convert to view-space
+    vec3 viewPos = (globalUbo.view * vec4(worldPos, 1.0)).xyz;
+    vec3 normal = normalize(mat3(globalUbo.view) * worldNormal);
+    
+    // Get noise and calculate TBN matrix
+    vec2 noiseScale = pc.screenDim / 4.0;
+    vec3 randomVec = texture(samplerNoise, inUV * noiseScale).xyz;
+    
+    vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+    vec3 bitangent = cross(normal, tangent);
+    mat3 TBN = mat3(tangent, bitangent, normal);
+    
+    float occlusion = 0.0;
+    for(int i = 0; i < kernelSize; ++i) {
+        // get sample position
+        vec3 s = TBN * ubo.samples[i].xyz; 
+        s = viewPos + s * radius; 
+        
+        // project sample position
+        vec4 offset = vec4(s, 1.0);
+        offset = globalUbo.proj * offset; 
+        offset.xyz /= offset.w; 
+        offset.xy = offset.xy * 0.5 + 0.5; 
+        
+        // Get world pos of depth at sampled point
+        vec3 sampleWorldPos = texture(samplerPosition, offset.xy).xyz;
+        vec3 sampleViewPos = (globalUbo.view * vec4(sampleWorldPos, 1.0)).xyz;
+        
+        float sampleDepth = sampleViewPos.z;
+        
+        // range check & accumulate
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(viewPos.z - sampleDepth));
+        occlusion += (sampleDepth >= s.z + bias ? 1.0 : 0.0) * rangeCheck;           
+    }
+    
+    occlusion = 1.0 - (occlusion / kernelSize);
+    
+    imageStore(outSSAO, texCoord, vec4(occlusion));
+}

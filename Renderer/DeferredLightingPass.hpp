@@ -14,7 +14,7 @@ public:
     void init(VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout clusterLayout); 
     
     // Updates descriptors with G-Buffer views
-    void updateDescriptorSets(const GBuffer& gbuffer);
+    void updateDescriptorSets(const GBuffer& gbuffer, VkImageView ssaoMask);
 
     void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet, VkDescriptorSet clusterDescSet);
 

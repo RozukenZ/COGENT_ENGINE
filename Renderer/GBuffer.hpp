@@ -25,11 +25,13 @@ public:
     VkImageView getPositionView() const { return position.view; }
     VkImageView getNormalView() const { return normal.view; }
     VkImageView getAlbedoView() const { return albedo.view; }
+    VkImageView getMaterialView() const { return material.view; }
 
     // Compatibility Getters
     VkImageView getPositionImageView() const { return position.view; }
     VkImageView getNormalImageView() const { return normal.view; }
     VkImageView getAlbedoImageView() const { return albedo.view; }
+    VkImageView getMaterialImageView() const { return material.view; }
     VkImageView getDepthImageView() const { return depth.view; }
     VkImage getDepthImage() const { return depth.image; } // New Getter
     
@@ -37,8 +39,9 @@ public:
     VkImage getPositionImage() const { return position.image; }
     VkImage getNormalImage() const { return normal.image; }
     VkImage getAlbedoImage() const { return albedo.image; }
+    VkImage getMaterialImage() const { return material.image; }
     
-    // Get specific attachment view (0=Pos, 1=Norm, 2=Albedo, 3=Depth)
+    // Get specific attachment view (0=Pos, 1=Norm, 2=Albedo, 3=Material, 4=Depth)
     VkImageView getImageView(int index) const {
         if (index >= 0 && index < attachments.size()) {
             return attachments[index].view;
@@ -64,8 +67,8 @@ private:
     VkRenderPass renderPass;
     VkFramebuffer framebuffer;
 
-    // Attachments: Position, Normal, Albedo
-    FramebufferAttachment position, normal, albedo, depth;
+    // Attachments: Position, Normal, Albedo, Material, Depth
+    FramebufferAttachment position, normal, albedo, material, depth;
     std::vector<FramebufferAttachment> attachments; // Added to support getImageView(index)
     VkSampler sampler; // Single sampler for all attachments
 

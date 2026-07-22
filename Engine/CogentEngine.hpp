@@ -26,7 +26,8 @@
 #include "../Renderer/RenderPipeline.hpp"
 #include "../Core/Types.hpp"
 #include "../Core/VulkanUtils.hpp"
-#include "../Renderer/LightingPass.hpp"
+#include "../Renderer/SSAO.hpp"
+#include "../Renderer/ANSR/ANSRPass.hpp"
 #include "../Resources/Texture.hpp"
 #include "../Core/Camera.hpp"
 #include "../Editor/EditorUI.hpp"
@@ -142,6 +143,7 @@ private:
     RayTracer rayTracer;
     std::unique_ptr<DeferredLightingPass> deferredLightingPass;
     std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
+    std::unique_ptr<Cogent::Renderer::SSAO> ssao;
     std::unique_ptr<Cogent::Renderer::HDRPipeline> hdrPipeline;
     std::unique_ptr<Cogent::Graphics::ShaderSystem> shaderSystem;
     VkRenderPass lightingRenderPass;

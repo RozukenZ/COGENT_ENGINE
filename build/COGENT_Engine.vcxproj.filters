@@ -97,6 +97,9 @@
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\ScreenSpaceShadows.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\SSAO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
