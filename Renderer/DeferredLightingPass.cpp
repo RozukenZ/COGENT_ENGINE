@@ -15,8 +15,9 @@ DeferredLightingPass::~DeferredLightingPass() {
     vkDestroyDescriptorSetLayout(device.getDevice(), descriptorSetLayout, nullptr);
 }
 
-void DeferredLightingPass::init(VkDescriptorSetLayout globalLayout) {
+void DeferredLightingPass::init(VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout clusterLayout) {
     this->globalSetLayout = globalLayout; 
+    this->clusterSetLayout = clusterLayout;
     createDescriptorSetLayout();
     createPipeline(renderPass);
     createDescriptorPool();
@@ -209,7 +210,7 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     
-    std::array<VkDescriptorSetLayout, 2> setLayouts = { globalSetLayout, descriptorSetLayout };
+    std::array<VkDescriptorSetLayout, 3> setLayouts = { globalSetLayout, descriptorSetLayout, clusterSetLayout };
     pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(setLayouts.size());
     pipelineLayoutInfo.pSetLayouts = setLayouts.data(); 
 
@@ -242,11 +243,12 @@ void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
     vkDestroyShaderModule(device.getDevice(), vertModule, nullptr);
 }
 
-void DeferredLightingPass::execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet) {
+void DeferredLightingPass::execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet, VkDescriptorSet clusterDescSet) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
     
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &sceneGlobalDescSet, 0, nullptr);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &clusterDescSet, 0, nullptr);
     
     vkCmdDraw(cmd, 3, 1, 0, 0); 
 }

@@ -61,6 +61,8 @@ void CogentEngine::run() {
     initVulkan();
     initResources();
     
+    buildRenderGraph();
+
     LOG_INFO("--- DIAGNOSTIC CHECK ---");
     // ... (Keep original diagnostic logs if needed)
     
@@ -107,6 +109,8 @@ void CogentEngine::initVulkan() {
     // Instance created in GraphicsDevice constructor
     createSurface();
     graphicsDevice.init(surface);
+    pipelineCache = std::make_unique<PipelineCache>();
+    pipelineCache->init(graphicsDevice.getDevice());
     createDescriptorSetLayout();
     // Command Pool created in GraphicsDevice
     createCommandBuffer();
@@ -164,11 +168,22 @@ void CogentEngine::initResources() {
     // createLightingDescriptors();  // REMOVED: Handled by DeferredLightingPass
     createLightingRenderPass(); 
     createSwapchainFramebuffers(); 
+
+    shaderSystem = std::make_unique<Cogent::Graphics::ShaderSystem>(graphicsDevice);
+    pipelineCache = std::make_unique<PipelineCache>();
+    pipelineCache->init(graphicsDevice.getDevice());
     
+    // Initialize HDRPipeline
+    hdrPipeline = std::make_unique<Cogent::Renderer::HDRPipeline>(graphicsDevice, *shaderSystem, *pipelineCache);
+    hdrPipeline->init(swapchainExtent, lightingRenderPass);
+    
+    // Initialize LightCulling
+    lightCulling = std::make_unique<LightCulling>(graphicsDevice, *pipelineCache);
+    lightCulling->init(swapchainExtent, 1024); // max 1024 lights
+
     // Initialize Deferred Lighting Pass (and internal descriptors)
-    // Initialize Deferred Lighting Pass (and internal descriptors)
-    deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, lightingRenderPass, swapchainExtent);
-    deferredLightingPass->init(descriptorSetLayout); // [MODIFIED] Pass Global Layout
+    deferredLightingPass = std::make_unique<DeferredLightingPass>(graphicsDevice, hdrPipeline->getHDRRenderPass(), swapchainExtent);
+    deferredLightingPass->init(descriptorSetLayout, lightCulling->getDescriptorSetLayout()); // [MODIFIED] Pass cluster Layout
     deferredLightingPass->updateDescriptorSets(gBuffer);
 
     // Initialize SSS
@@ -344,12 +359,18 @@ void CogentEngine::cleanup() {
     // Command Pool destroyed by GraphicsDevice
     // vkDestroyCommandPool(device, commandPool, nullptr); 
 
+    lightCulling.reset();
     deferredLightingPass.reset();
     rayTracer.cleanup(graphicsDevice.getDevice());
     myModel.cleanup(graphicsDevice.getDevice());
 
     gBufferPipeline.cleanup(graphicsDevice.getDevice());
     gridPipeline.cleanup(graphicsDevice.getDevice());
+    
+    if (pipelineCache) {
+        pipelineCache->cleanup();
+        pipelineCache.reset();
+    }
 
     vkDestroyDescriptorPool(graphicsDevice.getDevice(), descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(graphicsDevice.getDevice(), descriptorSetLayout, nullptr);
@@ -743,8 +764,30 @@ void CogentEngine::updateUniformBuffer() {
     ubo.lightDirection = glm::normalize(glm::vec3(0.5f, -1.0f, -0.5f)); 
     ubo.lightColor = glm::vec3(1.0f, 0.95f, 0.8f); // Warm Sun
     ubo.lightIntensity = 2.0f;
+    
+    // Cluster Info
+    ubo.gridDimensions = glm::uvec4((swapchainExtent.width + 15) / 16, (swapchainExtent.height + 15) / 16, 24, 0); // w is total lights
+    ubo.screenDimensions = glm::vec2(swapchainExtent.width, swapchainExtent.height);
+    ubo.zNear = 0.1f;
+    ubo.zFar = 100.0f;
 
     memcpy(uniformBufferMapped, &ubo, sizeof(ubo));
+    
+    // Update LightCulling UBO and dummy lights
+    if (lightCulling) {
+        LightCullingUBO lcUBO{};
+        lcUBO.viewMatrix = ubo.view;
+        lcUBO.projectionMatrix = ubo.proj;
+        lcUBO.inverseProjection = glm::inverse(ubo.proj);
+        lcUBO.gridDimensions = glm::uvec4(ubo.gridDimensions.x, ubo.gridDimensions.y, ubo.gridDimensions.z, 0);
+        lcUBO.screenDimensions = ubo.screenDimensions;
+        lcUBO.zNear = ubo.zNear;
+        lcUBO.zFar = ubo.zFar;
+        lightCulling->updateUBO(lcUBO);
+        
+        std::vector<PointLight> dummyLights; // Pass empty for now, or add some test lights later
+        lightCulling->updateLights(dummyLights);
+    }
 }
 
 void CogentEngine::createTextureDescriptors() {
@@ -873,34 +916,46 @@ void CogentEngine::drawFrame() {
     }
 }
 
-void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+void CogentEngine::buildRenderGraph() {
+    renderGraph = std::make_unique<RenderGraph>(graphicsDevice);
 
-    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to start recording command buffer!");
+    renderGraph->registerImage("GBuffer_Albedo", gBuffer.getAlbedoImage(), gBuffer.getAlbedoImageView(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    renderGraph->registerImage("GBuffer_Normal", gBuffer.getNormalImage(), gBuffer.getNormalImageView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    renderGraph->registerImage("GBuffer_Position", gBuffer.getPositionImage(), gBuffer.getPositionImageView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    renderGraph->registerImage("GBuffer_Depth", gBuffer.getDepthImage(), gBuffer.getDepthImageView(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    
+    if (screenSpaceShadows) {
+        renderGraph->registerImage("SSS_Mask", screenSpaceShadows->getImage(), screenSpaceShadows->getOutputView(), VK_FORMAT_R8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
     }
 
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = gBuffer.getRenderPass();
-    renderPassInfo.framebuffer = gBuffer.getFramebuffer();
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = swapchainExtent;
+    RenderPassNode gbufferPass{};
+    gbufferPass.name = "GBuffer Pass";
+    gbufferPass.outputs = {
+        {"GBuffer_Albedo", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+        {"GBuffer_Normal", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+        {"GBuffer_Position", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+        {"GBuffer_Depth", VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT}
+    };
+    gbufferPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = gBuffer.getRenderPass();
+        renderPassInfo.framebuffer = gBuffer.getFramebuffer();
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = swapchainExtent;
 
-    std::array<VkClearValue, 4> clearValues{};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Position (Clear to 0)
-    clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Normal
-    // Use Editor UI background color for Scene View (Albedo clear color)
-    clearValues[2].color = {{editorUI.sceneBackgroundColor.x, editorUI.sceneBackgroundColor.y, editorUI.sceneBackgroundColor.z, 1.0f}}; 
-    clearValues[3].depthStencil = {1.0f, 0};           
+        std::array<VkClearValue, 4> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clearValues[2].color = {{editorUI.sceneBackgroundColor.x, editorUI.sceneBackgroundColor.y, editorUI.sceneBackgroundColor.z, 1.0f}}; 
+        clearValues[3].depthStencil = {1.0f, 0};           
 
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
 
-    rayTracer.render(commandBuffer, VK_NULL_HANDLE, mainCamera, static_cast<float>(glfwGetTime()));
+        rayTracer.render(cmd, VK_NULL_HANDLE, mainCamera, static_cast<float>(glfwGetTime()));
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -909,238 +964,195 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
         viewport.height = (float)swapchainExtent.height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
 
         VkRect2D scissor{};
         scissor.offset = {0, 0};
         scissor.extent = swapchainExtent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline.getPipeline());
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gBufferPipeline.getPipeline());
         
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
             gBufferPipeline.getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
             gBufferPipeline.getPipelineLayout(), 1, 1, &textureDescriptorSet, 0, nullptr);
 
-
         for (const auto& obj : gameObjects) {
-             // LOG_INFO("recordCommandBuffer: Drawing Object " + obj.name + " MeshID: " + std::to_string(obj.meshID));
             ObjectPushConstant pc = obj.getPushConstant();  
-            vkCmdPushConstants(
-                commandBuffer, 
-                gBufferPipeline.getPipelineLayout(), 
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 
-                0, 
-                sizeof(ObjectPushConstant), 
-                &pc
-            );
+            vkCmdPushConstants(cmd, gBufferPipeline.getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectPushConstant), &pc);
 
             if (obj.meshID >= 0 && obj.meshID < meshes.size()) {
-                meshes[obj.meshID].draw(commandBuffer);
-            } else {
-                 LOG_ERROR("Invalid Mesh ID: " + std::to_string(obj.meshID));
+                meshes[obj.meshID].draw(cmd);
             }
         }
 
-        // Draw Infinite Grid
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gridPipeline.getPipeline());
-        vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-            gridPipeline.getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
-        vkCmdDraw(commandBuffer, 6, 1, 0, 0);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gridPipeline.getPipeline());
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, gridPipeline.getPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
+        vkCmdDraw(cmd, 6, 1, 0, 0);
 
-    vkCmdEndRenderPass(commandBuffer);
+        vkCmdEndRenderPass(cmd);
+    };
 
-    std::array<VkImageMemoryBarrier, 3> barriers{};
+    RenderPassNode sssPass{};
+    sssPass.name = "Screen Space Shadows";
+    sssPass.inputs = {
+        {"GBuffer_Depth", VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    sssPass.outputs = {
+        {"SSS_Mask", VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    sssPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        if (screenSpaceShadows) {
+            glm::vec4 lightDir = glm::vec4(normalize(glm::vec3(0.5f, -1.0f, 0.2f)), 0.0f);
+            screenSpaceShadows->execute(cmd, mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix(), lightDir);
+        }
+    };
 
-    if (!screenSpaceShadows) {
-        LOG_ERROR("FATAL: screenSpaceShadows is NULL!");
-        throw std::runtime_error("screenSpaceShadows is NULL");
+    RenderPassNode lightCullPass{};
+    lightCullPass.name = "Light Culling";
+    lightCullPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        if (lightCulling) {
+            lightCulling->execute(cmd);
+            
+            VkMemoryBarrier lcBarrier{};
+            lcBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+            lcBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            lcBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 1, &lcBarrier, 0, nullptr, 0, nullptr);
+        }
+    };
+
+    if (hdrPipeline) {
+        renderGraph->registerImage("HDR_Color", hdrPipeline->getHDRImage(), hdrPipeline->getHDRView(), hdrPipeline->getHDRFormat(), VK_IMAGE_LAYOUT_UNDEFINED);
     }
 
-    barriers[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barriers[0].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; 
-    barriers[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; 
-    barriers[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[0].image = gBuffer.getAlbedoImage(); 
-    barriers[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barriers[0].subresourceRange.baseMipLevel = 0;
-    barriers[0].subresourceRange.levelCount = 1;
-    barriers[0].subresourceRange.baseArrayLayer = 0;
-    barriers[0].subresourceRange.layerCount = 1;
-    barriers[0].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    RenderPassNode lightingPass{};
+    lightingPass.name = "Deferred Lighting (HDR)";
+    lightingPass.inputs = {
+        {"GBuffer_Albedo", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
+        {"GBuffer_Normal", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
+        {"GBuffer_Position", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT},
+        {"SSS_Mask", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
+    };
+    lightingPass.outputs = {
+        {"HDR_Color", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT}
+    };
+    lightingPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        VkRenderPassBeginInfo lightRenderPassInfo{};
+        lightRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        lightRenderPassInfo.renderPass = hdrPipeline->getHDRRenderPass();
+        lightRenderPassInfo.framebuffer = hdrPipeline->getHDRFramebuffer(); 
+        lightRenderPassInfo.renderArea.offset = {0, 0};
+        lightRenderPassInfo.renderArea.extent = swapchainExtent;
 
-    barriers[1].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barriers[1].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    barriers[1].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barriers[1].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[1].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[1].image = gBuffer.getNormalImage();
-    barriers[1].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barriers[1].subresourceRange.baseMipLevel = 0;
-    barriers[1].subresourceRange.levelCount = 1;
-    barriers[1].subresourceRange.baseArrayLayer = 0;
-    barriers[1].subresourceRange.layerCount = 1;
-    barriers[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barriers[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        VkClearValue clearColor = {};
+        clearColor.color = {{0.53f, 0.81f, 0.92f, 1.0f}}; 
+        lightRenderPassInfo.clearValueCount = 1;
+        lightRenderPassInfo.pClearValues = &clearColor;
 
-    barriers[2].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barriers[2].oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    barriers[2].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barriers[2].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[2].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barriers[2].image = gBuffer.getPositionImage();
-    barriers[2].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barriers[2].subresourceRange.baseMipLevel = 0;
-    barriers[2].subresourceRange.levelCount = 1;
-    barriers[2].subresourceRange.baseArrayLayer = 0;
-    barriers[2].subresourceRange.layerCount = 1;
-    barriers[2].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barriers[2].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,         
-        0,
-        0, nullptr,
-        0, nullptr,
-        static_cast<uint32_t>(barriers.size()), barriers.data()
-    );
-
-    VkRenderPassBeginInfo lightRenderPassInfo{};
-    lightRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    lightRenderPassInfo.renderPass = lightingRenderPass;
-    lightRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex]; 
-    lightRenderPassInfo.renderArea.offset = {0, 0};
-    lightRenderPassInfo.renderArea.extent = swapchainExtent;
-
-    VkClearValue clearColor = {};
-    clearColor.color = {{0.53f, 0.81f, 0.92f, 1.0f}}; 
-    lightRenderPassInfo.clearValueCount = 1;
-    lightRenderPassInfo.pClearValues = &clearColor;
-
-        // Explicit Memory Barrier to ensure GBuffer write is done before SSS read (already partly handled by subpass dependencies or external barriers)
-        // Note: The previous barriers (lines 1039-1077 in original file) handle transition to SHADER_READ_ONLY_OPTIMAL for Fragment Shader. 
-        // SSS uses Compute Shader. We might need VK_IMAGE_LAYOUT_GENERAL or SHADER_READ_ONLY_OPTIMAL compatible with Storage Image or Sampled Image.
-        // SSS samples depth (should be DepthReadOnly) and writes to shadow mask (General/Storage).
-        
-        // --- 1. Screen Space Shadows Pass ---
-        // SSS reads Depth, writes to Shadow Mask.
-        // Need to ensure Depth is readable. (Depth Attachment Store Op was STORE, Layout DEPTH_STENCIL_ATTACHMENT_OPTIMAL or similar)
-        // Transition Depth to Shader Read Only if needed, or use Combined Image Sampler layout.
-        
-        // Transition SSS Image to GENERAL for Compute Write
-        VkImageMemoryBarrier sssImageBarrier{};
-        sssImageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        sssImageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED; 
-        sssImageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        sssImageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        sssImageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        sssImageBarrier.image = screenSpaceShadows->getImage(); 
-        sssImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        sssImageBarrier.subresourceRange.baseMipLevel = 0;
-        sssImageBarrier.subresourceRange.levelCount = 1;
-        sssImageBarrier.subresourceRange.baseArrayLayer = 0;
-        sssImageBarrier.subresourceRange.layerCount = 1;
-        sssImageBarrier.srcAccessMask = 0;
-        sssImageBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-
-        // Ensure Depth is readable by SSS (Synchronize GBuffer Write -> Compute Read)
-        VkImageMemoryBarrier depthBarrier{};
-        depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        depthBarrier.oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; // No layout change needed
-        depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        depthBarrier.image = gBuffer.getDepthImage(); // Need getter
-        depthBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        depthBarrier.subresourceRange.baseMipLevel = 0;
-        depthBarrier.subresourceRange.levelCount = 1;
-        depthBarrier.subresourceRange.baseArrayLayer = 0;
-        depthBarrier.subresourceRange.layerCount = 1;
-        depthBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        depthBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        VkImageMemoryBarrier sssBarriers[] = { sssImageBarrier, depthBarrier };
-
-        if (sssImageBarrier.image == VK_NULL_HANDLE) LOG_ERROR("FATAL: SSS Image is NULL!");
-        if (depthBarrier.image == VK_NULL_HANDLE) LOG_ERROR("FATAL: Depth Image is NULL!");
-
-        vkCmdPipelineBarrier(
-            commandBuffer,
-            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            2, sssBarriers
-        );
-
-        // Dispatch SSS:
-        // Use a fixed light direction for now (e.g. from top-right-front)
-        glm::vec4 lightDir = glm::vec4(normalize(glm::vec3(0.5f, -1.0f, 0.2f)), 0.0f);
-        screenSpaceShadows->execute(commandBuffer, mainCamera.getViewMatrix(), mainCamera.getProjectionMatrix(), lightDir);
-
-        // Memory Barrier: Ensure SSS Write finishes before Lighting Pass reads it? 
-        // (If Lighting Pass reads shadow mask)
-        VkMemoryBarrier sssBarrier{};
-        sssBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        sssBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        sssBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        
-        vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 1, &sssBarrier, 0, nullptr, 0, nullptr);
-
-        // --- 2. Deferred Lighting Pass ---
-
-        if (lightRenderPassInfo.renderPass == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting RenderPass is NULL!");
-        if (lightRenderPassInfo.framebuffer == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting Framebuffer is NULL!");
-
-        if (lightRenderPassInfo.renderPass == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting RenderPass is NULL!");
-        if (lightRenderPassInfo.framebuffer == VK_NULL_HANDLE) LOG_ERROR("FATAL: Lighting Framebuffer is NULL!");
-
-        vkCmdBeginRenderPass(commandBuffer, &lightRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(cmd, &lightRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         VkViewport viewportFullscreen{};
-        
         float vpWidth = renderingViewportSize.x;
         float vpHeight = renderingViewportSize.y;
-        
         if(vpWidth > swapchainExtent.width) vpWidth = (float)swapchainExtent.width;
         if(vpHeight > swapchainExtent.height) vpHeight = (float)swapchainExtent.height;
         if(vpWidth < 1.0f) vpWidth = 1.0f; 
         if(vpHeight < 1.0f) vpHeight = 1.0f;
-
         viewportFullscreen.width = vpWidth;
         viewportFullscreen.height = vpHeight;
         viewportFullscreen.minDepth = 0.0f;
         viewportFullscreen.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewportFullscreen);
+        vkCmdSetViewport(cmd, 0, 1, &viewportFullscreen);
 
         VkRect2D scissorFullscreen{};
         scissorFullscreen.offset = {0, 0};
         scissorFullscreen.extent = {(uint32_t)vpWidth, (uint32_t)vpHeight};
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissorFullscreen);
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissorFullscreen);
+        vkCmdSetScissor(cmd, 0, 1, &scissorFullscreen);
 
-        // Execute Lighting Pass (Fullscreen Quad)
-        // Pass the Global UBO (Camera) descriptor set if needed, or scene descriptor.
-        // The DeferredLightingPass::execute signature might need checking. 
-        // Checked header: void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet);
-        if (!deferredLightingPass) {
-             LOG_ERROR("FATAL: deferredLightingPass is NULL!");
-             throw std::runtime_error("deferredLightingPass is NULL");
+        if (deferredLightingPass) {
+            deferredLightingPass->execute(cmd, descriptorSet, lightCulling ? lightCulling->getDescriptorSet() : VK_NULL_HANDLE);
         }
+        vkCmdEndRenderPass(cmd);
+    };
+
+    RenderPassNode bloomPass{};
+    bloomPass.name = "Bloom Pass";
+    bloomPass.inputs = {
+        {"HDR_Color", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    // Outputs are handled internally by executeBloom with its own barriers on bloom texture
+    bloomPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        if (hdrPipeline) {
+            hdrPipeline->executeBloom(cmd);
+        }
+    };
+
+    RenderPassNode tonemapPass{};
+    tonemapPass.name = "Tonemap & UI Pass";
+    // Depends on HDR_Color read in graphics and Bloom texture (which ended in SHADER_READ_ONLY)
+    tonemapPass.inputs = {
+        {"HDR_Color", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
+    };
+    tonemapPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        VkRenderPassBeginInfo toneRenderPassInfo{};
+        toneRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        toneRenderPassInfo.renderPass = lightingRenderPass; // We still use this as swapchain pass
+        toneRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex];
+        toneRenderPassInfo.renderArea.offset = {0, 0};
+        toneRenderPassInfo.renderArea.extent = swapchainExtent;
+
+        VkClearValue clearColor = {};
+        clearColor.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
+        toneRenderPassInfo.clearValueCount = 1;
+        toneRenderPassInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass(cmd, &toneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         
-        deferredLightingPass->execute(commandBuffer, descriptorSet); // descriptorSet is UBO set
+        VkViewport viewportFullscreen{};
+        viewportFullscreen.width = (float)swapchainExtent.width;
+        viewportFullscreen.height = (float)swapchainExtent.height;
+        viewportFullscreen.minDepth = 0.0f;
+        viewportFullscreen.maxDepth = 1.0f;
+        vkCmdSetViewport(cmd, 0, 1, &viewportFullscreen);
 
-        editorUI.Draw(commandBuffer);
+        VkRect2D scissorFullscreen{};
+        scissorFullscreen.offset = {0, 0};
+        scissorFullscreen.extent = swapchainExtent;
+        vkCmdSetScissor(cmd, 0, 1, &scissorFullscreen);
 
-    vkCmdEndRenderPass(commandBuffer);
+        if (hdrPipeline) {
+            hdrPipeline->executeTonemap(cmd, swapchainFramebuffers[imageIndex], swapchainExtent);
+        }
+
+        editorUI.Draw(cmd);
+
+        vkCmdEndRenderPass(cmd);
+    };
+
+    renderGraph->addPass(gbufferPass);
+    renderGraph->addPass(sssPass);
+    renderGraph->addPass(lightCullPass);
+    renderGraph->addPass(lightingPass);
+    renderGraph->addPass(bloomPass);
+    renderGraph->addPass(tonemapPass);
+}
+
+void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to start recording command buffer!");
+    }
+
+    if (renderGraph) {
+        renderGraph->execute(commandBuffer, imageIndex);
+    } else {
+        LOG_ERROR("RenderGraph is not initialized!");
+    }
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to stop recording command buffer!");

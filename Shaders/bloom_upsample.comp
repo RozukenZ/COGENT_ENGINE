@@ -1,0 +1,45 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D srcTexture;
+layout(set = 0, binding = 1, rgba16f) uniform image2D dstImage;
+
+layout(push_constant) uniform PushConstants {
+    float filterRadius; // typically 0.005
+    float pad1;
+    float pad2;
+    float pad3;
+} pc;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(dstImage);
+    if (coord.x >= size.x || coord.y >= size.y) return;
+
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size);
+    vec2 texelSize = vec2(1.0) / vec2(textureSize(srcTexture, 0));
+    float x = pc.filterRadius;
+    float y = pc.filterRadius;
+
+    // 9-tap upsample (tent filter)
+    vec3 a = texture(srcTexture, vec2(uv.x - x, uv.y + y)).rgb;
+    vec3 b = texture(srcTexture, vec2(uv.x,     uv.y + y)).rgb;
+    vec3 c = texture(srcTexture, vec2(uv.x + x, uv.y + y)).rgb;
+
+    vec3 d = texture(srcTexture, vec2(uv.x - x, uv.y)).rgb;
+    vec3 e = texture(srcTexture, vec2(uv.x,     uv.y)).rgb;
+    vec3 f = texture(srcTexture, vec2(uv.x + x, uv.y)).rgb;
+
+    vec3 g = texture(srcTexture, vec2(uv.x - x, uv.y - y)).rgb;
+    vec3 h = texture(srcTexture, vec2(uv.x,     uv.y - y)).rgb;
+    vec3 i = texture(srcTexture, vec2(uv.x + x, uv.y - y)).rgb;
+
+    vec3 upsample = e * 4.0;
+    upsample += (b + d + f + h) * 2.0;
+    upsample += (a + c + g + i);
+    upsample *= 1.0 / 16.0;
+
+    // Additive blending: read existing pixel and add upsampled
+    vec4 existing = imageLoad(dstImage, coord);
+    imageStore(dstImage, coord, vec4(existing.rgb + upsample, 1.0));
+}

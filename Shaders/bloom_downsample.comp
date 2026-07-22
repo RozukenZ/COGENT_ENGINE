@@ -1,0 +1,53 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform sampler2D srcTexture;
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D dstImage;
+
+layout(push_constant) uniform PushConstants {
+    vec2 invResolution;
+    float threshold;
+    float pad;
+} pc;
+
+// 13-tap filter (Karis average)
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(dstImage);
+    if (coord.x >= size.x || coord.y >= size.y) return;
+
+    vec2 uv = (vec2(coord) + 0.5) * pc.invResolution * 2.0; // Wait, invResolution is of the dstImage?
+    // Let's use standard UV from center of dst pixel mapped to src
+    uv = (vec2(coord) + 0.5) / vec2(size);
+    vec2 texelSize = pc.invResolution; // Assuming invRes is 1.0 / srcResolution
+
+    // 13-tap downsample
+    vec3 A = texture(srcTexture, uv + vec2(-2.0, 2.0) * texelSize).rgb;
+    vec3 B = texture(srcTexture, uv + vec2( 0.0, 2.0) * texelSize).rgb;
+    vec3 C = texture(srcTexture, uv + vec2( 2.0, 2.0) * texelSize).rgb;
+    vec3 D = texture(srcTexture, uv + vec2(-2.0, 0.0) * texelSize).rgb;
+    vec3 E = texture(srcTexture, uv + vec2( 0.0, 0.0) * texelSize).rgb;
+    vec3 F = texture(srcTexture, uv + vec2( 2.0, 0.0) * texelSize).rgb;
+    vec3 G = texture(srcTexture, uv + vec2(-2.0,-2.0) * texelSize).rgb;
+    vec3 H = texture(srcTexture, uv + vec2( 0.0,-2.0) * texelSize).rgb;
+    vec3 I = texture(srcTexture, uv + vec2( 2.0,-2.0) * texelSize).rgb;
+    vec3 J = texture(srcTexture, uv + vec2(-1.0, 1.0) * texelSize).rgb;
+    vec3 K = texture(srcTexture, uv + vec2( 1.0, 1.0) * texelSize).rgb;
+    vec3 L = texture(srcTexture, uv + vec2(-1.0,-1.0) * texelSize).rgb;
+    vec3 M = texture(srcTexture, uv + vec2( 1.0,-1.0) * texelSize).rgb;
+
+    vec3 downsample = E * 0.125;
+    downsample += (A+C+G+I) * 0.03125;
+    downsample += (B+D+F+H) * 0.0625;
+    downsample += (J+K+L+M) * 0.125;
+
+    // Apply threshold on first pass (if threshold > 0)
+    if (pc.threshold > 0.0) {
+        float brightness = dot(downsample, vec3(0.2126, 0.7152, 0.0722));
+        if (brightness < pc.threshold) {
+            downsample = vec3(0.0);
+        }
+    }
+
+    imageStore(dstImage, coord, vec4(downsample, 1.0));
+}

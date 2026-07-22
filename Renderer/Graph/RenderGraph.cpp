@@ -4,16 +4,85 @@
 
 RenderGraph::RenderGraph(GraphicsDevice& device) : device(device) {}
 
+RenderGraph::~RenderGraph() {
+    cleanup();
+}
+
+void RenderGraph::cleanup() {
+    for (auto& pair : resources) {
+        if (pair.second.isTransient) {
+            vkDestroyImageView(device.getDevice(), pair.second.view, nullptr);
+            vmaDestroyImage(device.getAllocator(), pair.second.image, pair.second.allocation);
+        }
+    }
+    resources.clear();
+    passes.clear();
+}
+
 void RenderGraph::registerImage(const std::string& name, VkImage image, VkImageView view, VkFormat format, VkImageLayout initialLayout) {
     RenderGraphResource res{};
     res.name = name;
     res.image = image;
     res.view = view;
     res.format = format;
+    res.isTransient = false;
     res.currentLayout = initialLayout;
     res.currentAccess = 0; // Assuming fresh start
     res.currentStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     
+    resources[name] = res;
+}
+
+void RenderGraph::createTransientImage(const std::string& name, VkFormat format, VkExtent3D extent, VkImageUsageFlags usage) {
+    RenderGraphResource res{};
+    res.name = name;
+    res.format = format;
+    res.isTransient = true;
+    res.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    res.currentAccess = 0;
+    res.currentStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent = extent;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = usage | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    // Prefer lazily allocated if available (usually on mobile/tiled architectures)
+    allocInfo.preferredFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+
+    if (vmaCreateImage(device.getAllocator(), &imageInfo, &allocInfo, &res.image, &res.allocation, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create transient image in RenderGraph");
+    }
+
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = res.image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D24_UNORM_S8_UINT) {
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else {
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(device.getDevice(), &viewInfo, nullptr, &res.view) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create transient image view in RenderGraph");
+    }
+
     resources[name] = res;
 }
 
@@ -37,7 +106,7 @@ void RenderGraph::compile() {
     }
 }
 
-void RenderGraph::execute(VkCommandBuffer cmd) {
+void RenderGraph::execute(VkCommandBuffer cmd, uint32_t imageIndex) {
     for (auto& pass : passes) {
         // 1. Pre-Pass Barriers (Transition Inputs & Outputs)
         // Check Inputs
@@ -55,14 +124,9 @@ void RenderGraph::execute(VkCommandBuffer cmd) {
         }
 
         // 2. Execute Pass
-        // Debug Marker
-        // vkCmdDebugMarkerBeginEXT... (if supported)
-        
         if (pass.execute) {
-            pass.execute(cmd);
+            pass.execute(cmd, imageIndex);
         }
-        
-        // vkCmdDebugMarkerEndEXT...
     }
 }
 

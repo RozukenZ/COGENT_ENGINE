@@ -219,7 +219,7 @@ bool DescriptorBuilder::build(VkDescriptorSet& set, VkDescriptorSetLayout& layou
     for (VkWriteDescriptorSet& w : writes) {
         w.dstSet = set;
     }
-    vkUpdateDescriptorSets(cache->device, (uint32_t)writes.size(), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(cache->getDevice(), (uint32_t)writes.size(), writes.data(), 0, nullptr);
     return true;
 }
 

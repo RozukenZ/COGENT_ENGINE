@@ -41,6 +41,13 @@
 #include "../Core/Graphics/GraphicsDevice.hpp"
 #include "../Renderer/DeferredLightingPass.hpp"
 #include "../Renderer/ScreenSpaceShadows.hpp"
+#include "../Renderer/HDRPipeline.hpp"
+
+// Forward Declarations
+class Scene;
+#include "../Core/Graphics/ShaderSystem.hpp"
+#include "../Core/Graphics/PipelineCache.hpp"
+#include "../Renderer/Lighting/LightCulling.hpp"
 
 // QueueFamilyIndices struct is defined in GraphicsDevice.hpp
 
@@ -87,6 +94,7 @@ private:
     void createLightingDescriptors();
     
     // Rendering Helpers
+    void buildRenderGraph();
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     
     // Game Logic Helpers
@@ -134,7 +142,12 @@ private:
     RayTracer rayTracer;
     std::unique_ptr<DeferredLightingPass> deferredLightingPass;
     std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
+    std::unique_ptr<Cogent::Renderer::HDRPipeline> hdrPipeline;
+    std::unique_ptr<Cogent::Graphics::ShaderSystem> shaderSystem;
     VkRenderPass lightingRenderPass;
+    
+    std::unique_ptr<PipelineCache> pipelineCache;
+    std::unique_ptr<LightCulling> lightCulling;
     
     // Resources
     Texture myTexture;

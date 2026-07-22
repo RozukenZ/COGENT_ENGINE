@@ -1,0 +1,113 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 9, local_size_z = 1) in;
+
+struct PointLight {
+    vec4 positionAndRadius; // xyz: position, w: radius
+    vec4 colorAndIntensity; // xyz: color, w: intensity
+};
+
+layout(std140, set = 0, binding = 0) readonly buffer LightBuffer {
+    PointLight lights[];
+};
+
+struct LightGrid {
+    uint offset;
+    uint count;
+};
+
+layout(std430, set = 0, binding = 1) writeonly buffer GridBuffer {
+    LightGrid grids[];
+};
+
+layout(std430, set = 0, binding = 2) writeonly buffer IndexBuffer {
+    uint globalIndices[];
+};
+
+layout(std140, set = 0, binding = 3) uniform CullingUBO {
+    mat4 viewMatrix;
+    mat4 projectionMatrix;
+    mat4 inverseProjection;
+    uvec4 gridDimensions; // xyz: dims, w: total light count
+    vec2 screenDimensions;
+    float zNear;
+    float zFar;
+} ubo;
+
+layout(std430, set = 0, binding = 4) buffer AtomicCounter {
+    uint globalIndexCount;
+};
+
+shared uint visibleLightCount;
+shared uint visibleLightIndices[1024];
+shared uint startIndexOffset;
+
+// Helper to convert screen/depth to view space
+vec3 screenToView(vec2 screenPos, float depth) {
+    vec2 ndc = (screenPos / ubo.screenDimensions) * 2.0 - 1.0;
+    vec4 clip = vec4(ndc, depth, 1.0);
+    vec4 view = ubo.inverseProjection * clip;
+    return view.xyz / view.w;
+}
+
+void main() {
+    uint clusterIndex = gl_WorkGroupID.x +
+                        gl_WorkGroupID.y * gl_NumWorkGroups.x +
+                        gl_WorkGroupID.z * (gl_NumWorkGroups.x * gl_NumWorkGroups.y);
+    
+    if (gl_LocalInvocationIndex == 0) {
+        visibleLightCount = 0;
+    }
+    barrier();
+
+    // Calculate cluster bounding box in view space
+    // Simplified for AABB in view space
+    vec2 tileSize = ubo.screenDimensions / vec2(ubo.gridDimensions.xy);
+    vec2 minScreen = gl_WorkGroupID.xy * tileSize;
+    vec2 maxScreen = (gl_WorkGroupID.xy + vec2(1.0)) * tileSize;
+    
+    float zSliceNear = ubo.zNear * pow(ubo.zFar / ubo.zNear, float(gl_WorkGroupID.z) / float(ubo.gridDimensions.z));
+    float zSliceFar  = ubo.zNear * pow(ubo.zFar / ubo.zNear, float(gl_WorkGroupID.z + 1) / float(ubo.gridDimensions.z));
+    
+    // Project corners to view space
+    vec3 v0 = screenToView(minScreen, 1.0); // using 1.0 is wrong, depth is non-linear. 
+    // This is a simplified placeholder bounding box logic.
+    // In a real implementation, you construct frustum planes for the cluster.
+    
+    uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
+    uint passCount = (ubo.gridDimensions.w + threadCount - 1) / threadCount;
+
+    for (uint i = 0; i < passCount; i++) {
+        uint lightIndex = i * threadCount + gl_LocalInvocationIndex;
+        if (lightIndex < ubo.gridDimensions.w) {
+            PointLight light = lights[lightIndex];
+            vec3 lightPosView = (ubo.viewMatrix * vec4(light.positionAndRadius.xyz, 1.0)).xyz;
+            float radius = light.positionAndRadius.w;
+            
+            // Simplified intersection: just checking z slice for now as a placeholder
+            // A full implementation requires intersecting the view-space sphere with the 6 frustum planes
+            bool intersects = (lightPosView.z - radius < zSliceFar) && (lightPosView.z + radius > zSliceNear);
+            
+            if (intersects) {
+                uint offset = atomicAdd(visibleLightCount, 1);
+                if (offset < 1024) {
+                    visibleLightIndices[offset] = lightIndex;
+                }
+            }
+        }
+    }
+    
+    barrier();
+    
+    if (gl_LocalInvocationIndex == 0) {
+        startIndexOffset = atomicAdd(globalIndexCount, visibleLightCount);
+        grids[clusterIndex].offset = startIndexOffset;
+        grids[clusterIndex].count = visibleLightCount;
+    }
+    
+    barrier();
+    
+    for (uint i = gl_LocalInvocationIndex; i < visibleLightCount; i += threadCount) {
+        globalIndices[startIndexOffset + i] = visibleLightIndices[i];
+    }
+}

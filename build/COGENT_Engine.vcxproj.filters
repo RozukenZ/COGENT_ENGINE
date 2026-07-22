@@ -76,13 +76,22 @@
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Core\Diagnostics\GpuProfiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Core\Graphics\ShaderSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\Graph\RenderGraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\HDRPipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\DeferredLightingPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\ShadowPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\Lighting\LightCulling.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\ScreenSpaceShadows.cpp">

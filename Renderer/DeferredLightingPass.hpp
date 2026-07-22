@@ -11,12 +11,12 @@ public:
     ~DeferredLightingPass();
 
     // Sets up the pipeline and descriptors
-    void init(VkDescriptorSetLayout globalLayout); 
+    void init(VkDescriptorSetLayout globalLayout, VkDescriptorSetLayout clusterLayout); 
     
     // Updates descriptors with G-Buffer views
     void updateDescriptorSets(const GBuffer& gbuffer);
 
-    void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet);
+    void execute(VkCommandBuffer cmd, VkDescriptorSet sceneGlobalDescSet, VkDescriptorSet clusterDescSet);
 
 private:
     void createDescriptorSetLayout();
@@ -31,7 +31,8 @@ private:
     VkPipeline pipeline;
 
     VkDescriptorSetLayout descriptorSetLayout; 
-    VkDescriptorSetLayout globalSetLayout;     
+    VkDescriptorSetLayout globalSetLayout;
+    VkDescriptorSetLayout clusterSetLayout;
     VkDescriptorPool descriptorPool;
     VkDescriptorSet descriptorSet;
     VkSampler sampler;

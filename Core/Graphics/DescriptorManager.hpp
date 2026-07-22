@@ -45,6 +45,7 @@ public:
     void init(VkDevice device);
     void cleanup();
     VkDescriptorSetLayout createDescriptorLayout(VkDescriptorSetLayoutCreateInfo* info);
+    VkDevice getDevice() const { return device; }
 
 private:
     struct DescriptorLayoutInfo {

@@ -98,7 +98,13 @@ struct CameraUBO {
     alignas(16) glm::vec3 lightDirection;
     alignas(16) glm::vec3 lightColor;
     float lightIntensity;
-    float padding2[3]; // Padding for 16-byte alignment
+    float _pad5[3];
+    
+    // 6. Cluster Info
+    alignas(16) glm::uvec4 gridDimensions;
+    alignas(8) glm::vec2 screenDimensions;
+    float zNear;
+    float zFar;
 };
 
 // ==========================================

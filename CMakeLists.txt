@@ -60,9 +60,12 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics/DescriptorManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics/PipelineCache.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Diagnostics/GpuProfiler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics/ShaderSystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Graph/RenderGraph.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/HDRPipeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/DeferredLightingPass.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ShadowPass.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Lighting/LightCulling.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ScreenSpaceShadows.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Visibility/VisibilitySystem.cpp
