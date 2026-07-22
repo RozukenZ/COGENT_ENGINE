@@ -1,0 +1,127 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(binding = 0, rgba8) uniform writeonly image2D outShadowMask;
+layout(binding = 1) uniform sampler2D depthSampler;
+
+layout(push_constant) uniform Constants {
+    mat4 view;
+    mat4 proj;
+    vec4 lightDir;
+} pc;
+
+const int MAX_STEPS = 64; 
+const float STEP_SIZE = 0.05; 
+const float MAX_DISTANCE = 5.0; 
+const float THICKNESS = 0.1; // Thickness of the depth buffer surface
+
+// Reconstruct View Position from Depth
+vec3 reconstructViewPos(vec2 uv, float depth) {
+    // NDZ from Depth (0..1)
+    // Vulkan has clip space Z 0..1? or -1..1?
+    // Using standard projection:
+    // z = depth;
+    // clip = (uv * 2 - 1, depth, 1)
+    // view = inverse(proj) * clip
+    // view /= view.w
+    
+    vec4 clipPos = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 viewPos = inverse(pc.proj) * clipPos;
+    return viewPos.xyz / viewPos.w;
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outShadowMask);
+    
+    if (pos.x >= size.x || pos.y >= size.y) return;
+
+    vec2 uv = (vec2(pos) + 0.5) / vec2(size);
+    float depth = texture(depthSampler, uv).r;
+
+    // Early exit if background (max depth)
+    // Note: Reverse-Z or Standard-Z? 
+    // Assuming standard Z (1.0 = Far, 0.0 = Near) or (0.0 = Near)
+    // Let's assume standard 0..1 depth.
+    if (depth >= 1.0) {
+        imageStore(outShadowMask, pos, vec4(1.0));
+        return;
+    }
+
+    vec3 viewPos = reconstructViewPos(uv, depth);
+    
+    // Light Direction in View Space
+    // pc.lightDir is likely in World Space (or passed as such?)
+    // If passed as World Space, we need to transform to View Space.
+    // Assuming pc.lightDir is already transformed to View Space or handle it here.
+    // Let's assume passed in World Space, so transform to View.
+    // Wait, pc.view is View Matrix.
+    
+    // For simplicity, let's assume pc.lightDir IS passed in World Space.
+    vec3 L = mat3(pc.view) * normalize(pc.lightDir.xyz); // Direction TO light
+    
+    // In Raymarching, we march TOWARDS the light to find occlusion.
+    // If we hit something closer than the ray, it's occluded.
+    
+    float shadow = 1.0;
+    vec3 rayPos = viewPos;
+    vec3 rayDir = L; // Towards light
+
+    // Offset ray start to avoid self-shadowing (acne)
+    rayPos += rayDir * 0.05; 
+    
+    // Jitter / Noise?
+    // float noise = ... (optional for later)
+
+    for (int i = 0; i < MAX_STEPS; i++) {
+        rayPos += rayDir * STEP_SIZE;
+        
+        // Project rayPos back to Screen Space (UV)
+        vec4 projPos = pc.proj * vec4(rayPos, 1.0);
+        projPos.xyz /= projPos.w;
+        
+        // Check bounds
+        if (projPos.x < -1.0 || projPos.x > 1.0 || projPos.y < -1.0 || projPos.y > 1.0 || projPos.z < 0.0 || projPos.z > 1.0) {
+            break; // Out of screen
+        }
+
+        vec2 sampleUV = projPos.xy * 0.5 + 0.5;
+        float sampleDepth = texture(depthSampler, sampleUV).r;
+        
+        // Reconstruct Z of surface at sampleUV
+        // Linearize depth comparison? 
+        // It's safer to compare View Space Z values or linear depths.
+        
+        vec3 surfacePos = reconstructViewPos(sampleUV, sampleDepth);
+        
+        // Check intersection
+        // If Ray is BEHIND surface (Ray Depth > Surface Depth) AND not too far behind (Thickness)
+        // Note: In View Space (Right Handed, -Z forward), objects closer to camera have larger Z (less negative)? 
+        // Standard View: Camera at 0, looking -Z.
+        // Near = -0.1, Far = -1000.
+        // So Lower Z (more negative) is further away.
+        // RayPos.z is e.g. -50. Surface.z is -40 (closer).
+        // Ray is behind surface if RayPos.z < Surface.z.
+        
+        // Let's use distances from camera (positive depths) for easier mental model if preferred, 
+        // but let's stick to raw View Space Z.
+        
+        float rayDepth = rayPos.z;       // e.g. -50
+        float surfaceDepth = surfacePos.z; // e.g. -45
+        
+        float delta = rayDepth - surfaceDepth; // -50 - (-45) = -5. (Ray is 5 units BEHIND surface)
+        
+        // Intersection condition:
+        // Ray is BEHIND surface (rayDepth < surfaceDepth)
+        // AND difference is small ( < THICKNESS )
+        
+        if (rayDepth < surfaceDepth && delta > -THICKNESS) {
+            // Hit!
+            shadow = 0.0;
+            break;
+        }
+    }
+
+    imageStore(outShadowMask, pos, vec4(shadow));
+}

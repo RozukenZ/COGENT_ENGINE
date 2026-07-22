@@ -1,0 +1,1185 @@
+#include "EditorUI.hpp"
+#include <array>
+#include <iostream>
+#include <cmath>
+#include "ImGuizmo.h"
+#include "imgui_internal.h"
+#include <glm/gtc/type_ptr.hpp>
+#include "../Core/Types.hpp"
+#include "../Core/Camera.hpp"
+#include "../Core/Logger.hpp"
+
+namespace fs = std::filesystem;
+
+void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice physicalDevice, 
+                    VkDevice device, uint32_t queueFamily, VkQueue queue, 
+                    VkRenderPass renderPass, uint32_t minImageCount) 
+{
+    // 1. Create Descriptor Pool
+    VkDescriptorPoolSize pool_sizes[] = {
+        { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+    };
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = std::size(pool_sizes);
+    pool_info.pPoolSizes = pool_sizes;
+
+    vkCreateDescriptorPool(device, &pool_info, nullptr, &imguiPool);
+
+    // 2. Setup Context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+
+    // 3. Apply Ultra Modern Theme
+    ApplyModernDarkTheme();
+
+    // 4. Subscribe to Logger
+    Cogent::Core::Logger::Get().AddCallback([this](const std::string& msg) {
+        consoleLogs.push_back(msg);
+        if (consoleLogs.size() > 1000) {
+            consoleLogs.erase(consoleLogs.begin());
+        }
+    });
+
+    // 4. Setup Backend
+    ImGui_ImplGlfw_InitForVulkan(window, true);
+    
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = instance;
+    init_info.PhysicalDevice = physicalDevice;
+    init_info.Device = device;
+    init_info.QueueFamily = queueFamily;
+    init_info.Queue = queue;
+    init_info.PipelineCache = VK_NULL_HANDLE;
+    init_info.DescriptorPool = imguiPool;
+    init_info.MinImageCount = minImageCount;
+    init_info.ImageCount = minImageCount;
+    
+    init_info.PipelineInfoMain.RenderPass = renderPass;
+    init_info.PipelineInfoMain.Subpass = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT; 
+    
+    ImGui_ImplVulkan_Init(&init_info);
+}
+
+// [FIX] Parameter fungsi ditambahkan: onSpawn callback, outSceneSize, textureSize
+void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize, glm::vec2 textureSize) {
+    
+    // 1. Setup Frame ImGui
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // 2. Setup Fullscreen Window Docking (Opsional tapi bagus untuk Editor)
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    
+    // 3. State Machine Logic
+    if (currentState == AppState::LOADING) {
+        RenderLoadingScreen(currentState);
+    } 
+    else if (currentState == AppState::PROJECT_MENU) {
+        try {
+            RenderProjectHub(currentState, showCursor);
+            
+            // [FIX] Logic Folder Browser (Floating Window)
+            if (openFolderPopup) {
+                showFolderBrowser = true;
+                openFolderPopup = false;
+            }
+
+            if (showFolderBrowser) {
+                RenderFolderBrowserModal();
+            }
+            LOG_INFO("RenderProjectHub Finished");
+        } catch (const std::exception& e) {
+            LOG_ERROR("Exception in ProjectHub: " + std::string(e.what()));
+        }
+    } 
+    else if (currentState == AppState::EDITOR) {
+        // [FIX] Passing data Camera & Object ke Workspace
+        // Agar Gizmo dan Inspector bisa bekerja!
+        RenderEditorWorkspace(showCursor, deltaTime, camera, selectedObject, gameObjects, selectedIndex, sceneTexture, onSpawn, outSceneSize, textureSize);
+    }
+
+    // 4. Render Draw Data
+    LOG_INFO("ImGui::Render() Starting...");
+    ImGui::Render();
+    LOG_INFO("ImGui::Render() Finished");
+}
+
+void EditorUI::Draw(VkCommandBuffer commandBuffer) {
+    LOG_INFO("EditorUI::Draw called");
+    if (ImGui::GetDrawData()) {
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
+        LOG_INFO("ImGui_ImplVulkan_RenderDrawData Finished");
+    } else {
+        LOG_WARN("ImGui::GetDrawData() returned NULL!");
+    }
+}
+
+void EditorUI::Cleanup(VkDevice device) {
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    vkDestroyDescriptorPool(device, imguiPool, nullptr);
+}
+
+// ==================================================================================
+//                              ULTRA MODERN THEME
+// ==================================================================================
+
+void EditorUI::ApplyModernDarkTheme() {
+    ImGuiStyle& style = ImGui::GetStyle();
+    
+    // Spacing & Rounding - Unreal Engine 5 inspired (sleek, slightly rounded but structured)
+    style.WindowPadding     = ImVec2(8.0f, 8.0f);
+    style.FramePadding      = ImVec2(6.0f, 4.0f);
+    style.ItemSpacing       = ImVec2(6.0f, 6.0f);
+    style.ItemInnerSpacing  = ImVec2(6.0f, 4.0f);
+    style.IndentSpacing     = 18.0f;
+    style.ScrollbarSize     = 12.0f;
+    
+    // Slightly less rounded corners for a more professional tool look (like UE5)
+    style.WindowRounding    = 4.0f;
+    style.ChildRounding     = 4.0f;
+    style.FrameRounding     = 3.0f;
+    style.PopupRounding     = 4.0f;
+    style.ScrollbarRounding = 4.0f;
+    style.GrabRounding      = 3.0f;
+    style.TabRounding       = 4.0f;
+    
+    // Borders
+    style.WindowBorderSize  = 1.0f;
+    style.FrameBorderSize   = 1.0f;
+    style.PopupBorderSize   = 1.0f;
+
+    // Modern color palette - Deep dark slate (UE5 style)
+    ImVec4* colors = style.Colors;
+    
+    // Text
+    colors[ImGuiCol_Text]                   = ImVec4(0.85f, 0.85f, 0.85f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    
+    // Backgrounds - Very dark slate
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.11f, 0.11f, 0.11f, 1.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.98f);
+    
+    // Borders - Subtle
+    colors[ImGuiCol_Border]                 = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    
+    // Title bars
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    
+    // Frames - Input fields, etc
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    
+    // Buttons - UE5 style
+    colors[ImGuiCol_Button]                 = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+    
+    // Accent color - Electric blue
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 0.44f, 0.88f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.00f, 0.44f, 0.88f, 1.00f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.00f, 0.55f, 1.00f, 1.00f);
+    
+    // Headers - Collapsible sections
+    colors[ImGuiCol_Header]                 = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+    
+    // Separator
+    colors[ImGuiCol_Separator]              = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+    
+    // Tabs
+    colors[ImGuiCol_Tab]                    = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+    
+    // Scrollbar
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+}
+
+// ==================================================================================
+//                              MODERN RENDER FUNCTIONS
+// ==================================================================================
+
+void EditorUI::RenderLoadingScreen(AppState& currentState) {
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove;
+    ImGui::Begin("Loading", nullptr, flags);
+    
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    
+    // Animated logo with glow effect
+    ImGui::SetCursorPos(ImVec2(center.x - 180, center.y - 120));
+    
+    // Title with gradient-like effect (layered text)
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.15f, 0.45f, 0.85f, 0.3f));
+    ImGui::SetWindowFontScale(2.8f);
+    ImGui::SetCursorPos(ImVec2(center.x - 177, center.y - 117));
+    ImGui::Text("COGENT ENGINE");
+    ImGui::PopStyleColor();
+    
+    ImGui::SetCursorPos(ImVec2(center.x - 180, center.y - 120));
+    ImGui::SetWindowFontScale(2.8f);
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "COGENT ENGINE");
+    ImGui::SetWindowFontScale(1.0f);
+    
+    // Subtitle
+    ImGui::SetCursorPos(ImVec2(center.x - 100, center.y - 50));
+    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.75f, 1.0f), "Next-Gen Game Engine");
+
+    // Animated progress
+    loadingProgress += 0.008f;
+    if (loadingProgress >= 1.0f) {
+        loadingProgress = 1.0f;
+        currentState = AppState::PROJECT_MENU;
+    }
+
+    // Loading text with animation
+    ImGui::SetCursorPos(ImVec2(center.x - 220, center.y + 30));
+    const char* loadingTexts[] = {
+        "Initializing Vulkan Renderer...",
+        "Loading Core Modules...",
+        "Preparing Workspace...",
+        "Almost Ready..."
+    };
+    int textIndex = static_cast<int>(loadingProgress * 4) % 4;
+    ImGui::TextDisabled("%s", loadingTexts[textIndex]);
+    
+    // Modern progress bar with glow
+    ImGui::SetCursorPos(ImVec2(center.x - 250, center.y + 65));
+    
+    // Background bar
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+    ImGui::ProgressBar(loadingProgress, ImVec2(500, 8), "");
+    ImGui::PopStyleColor(2);
+    
+    // Progress percentage
+    ImGui::SetCursorPos(ImVec2(center.x - 20, center.y + 80));
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "%.0f%%", loadingProgress * 100);
+
+    ImGui::End();
+}
+
+void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
+    showCursor = true; 
+    
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
+    ImGui::Begin("Hub", nullptr, flags);
+
+    // [LOG] Start Hub
+    // LOG_INFO("Project Hub Rendered");
+
+    ImGui::Columns(2, "HubSplit", false);
+    ImGui::SetColumnWidth(0, 320);
+
+    // --- LEFT SIDEBAR ---
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.08f, 0.08f, 0.10f, 1.0f));
+    ImGui::BeginChild("Sidebar", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
+    
+    ImGui::Dummy(ImVec2(0, 30));
+    
+    // Logo
+    ImGui::SetCursorPosX(40);
+    ImGui::SetWindowFontScale(1.5f);
+    ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "COGENT");
+    ImGui::SetWindowFontScale(1.0f);
+    ImGui::SetCursorPosX(40);
+    ImGui::TextDisabled("Game Engine Hub");
+    
+    ImGui::Dummy(ImVec2(0, 40));
+    
+    // Navigation Buttons
+    ImGui::Indent(25);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+    
+    // Logic Tab Active Color
+    ImVec4 activeBtn = ImVec4(0.35f, 0.40f, 0.45f, 1.0f); 
+    ImVec4 normalBtn = ImVec4(0.25f, 0.25f, 0.30f, 1.0f);
+
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 0 ? activeBtn : normalBtn);
+    if (ImGui::Button("PROJECTS", ImVec2(250, 50))) selectedHubTab = 0;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 1 ? activeBtn : normalBtn);
+    if (ImGui::Button("LEARN", ImVec2(250, 50))) selectedHubTab = 1;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 2 ? activeBtn : normalBtn);
+    if (ImGui::Button("COMMUNITY", ImVec2(250, 50))) selectedHubTab = 2;
+    ImGui::PopStyleColor();
+    ImGui::Dummy(ImVec2(0, 8));
+    
+    ImGui::PushStyleColor(ImGuiCol_Button, selectedHubTab == 3 ? activeBtn : normalBtn);
+    if (ImGui::Button("SETTINGS", ImVec2(250, 50))) selectedHubTab = 3;
+    ImGui::PopStyleColor();
+    
+    ImGui::PopStyleVar();
+    ImGui::Unindent(25);
+    
+    // Footer
+    ImGui::SetCursorPos(ImVec2(40, ImGui::GetWindowHeight() - 60));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.55f, 1.0f));
+    ImGui::Text("Version 1.0.0");
+    ImGui::Text("Â© 2026 Cogent Studios");
+    ImGui::PopStyleColor();
+    
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+
+    ImGui::NextColumn();
+
+    // --- RIGHT PANEL (CONTENT) ---
+    ImGui::BeginChild("MainContent", ImVec2(0, 0), false);
+    
+    ImGui::Dummy(ImVec2(0, 30));
+    
+    if (selectedHubTab == 0) {
+        // Header
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.96f, 0.98f, 1.0f));
+        ImGui::SetWindowFontScale(1.8f);
+        ImGui::Text("Recent Projects");
+        ImGui::SetWindowFontScale(1.0f);
+        ImGui::PopStyleColor();
+        ImGui::TextDisabled("Continue where you left off");
+        
+        ImGui::Dummy(ImVec2(0, 20));
+        
+        // Search
+        ImGui::PushItemWidth(400);
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##search", "Search projects...", searchBuf, 128);
+        ImGui::PopItemWidth();
+        
+        ImGui::Dummy(ImVec2(0, 20));
+
+        // Project Cards Area
+        ImGui::BeginChild("ProjectCards", ImVec2(0, -100), false);
+        
+        // Card 1
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.14f, 0.14f, 0.17f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 12.0f);
+        
+        ImGui::BeginChild("Card1", ImVec2(ImGui::GetContentRegionAvail().x, 100), true, ImGuiWindowFlags_NoScrollbar);
+        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("FPS Shooter Demo"); ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPos(ImVec2(20, 50)); ImGui::TextDisabled("D:/Dev/FPS_Demo");
+        ImGui::SetCursorPos(ImVec2(20, 70)); ImGui::TextDisabled("Last modified: 2 hours ago");
+        
+        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("OPEN", ImVec2(100, 40))) { 
+            LOG_INFO("Opening Demo Project: FPS Shooter");
+            currentState = AppState::EDITOR; 
+            showCursor = false; 
+        }
+        ImGui::PopStyleColor();
+        ImGui::EndChild();
+        
+        ImGui::Dummy(ImVec2(0, 15));
+        
+        // Card 2
+        ImGui::BeginChild("Card2", ImVec2(ImGui::GetContentRegionAvail().x, 100), true, ImGuiWindowFlags_NoScrollbar);
+        ImGui::SetCursorPos(ImVec2(20, 20)); ImGui::SetWindowFontScale(1.3f); ImGui::Text("RPG Open World"); ImGui::SetWindowFontScale(1.0f);
+        ImGui::SetCursorPos(ImVec2(20, 50)); ImGui::TextDisabled("D:/Dev/RPG_Project");
+        ImGui::SetCursorPos(ImVec2(20, 70)); ImGui::TextDisabled("Last modified: 1 day ago");
+        
+        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 120, 30));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("OPEN##2", ImVec2(100, 40))) { 
+            LOG_INFO("Opening Demo Project: RPG Open World");
+            currentState = AppState::EDITOR; 
+            showCursor = false; 
+        }
+        ImGui::PopStyleColor();
+        ImGui::EndChild();
+        
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        ImGui::EndChild(); // End ProjectCards
+
+        // Action Buttons (Bottom)
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+        
+        // [FIX UTAMA] Logic Show New Project (Toggle Flag Overlay)
+        if (ImGui::Button("NEW PROJECT", ImVec2(200, 50))) {
+            LOG_INFO("Button [NEW PROJECT] Clicked");
+            showNewProjectModal = true;
+        }
+        
+        ImGui::SameLine();
+        ImGui::PopStyleColor();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        if (ImGui::Button("OPEN FROM DISK", ImVec2(200, 50))) { }
+        
+        ImGui::PopStyleColor();
+
+
+
+        ImGui::PopStyleVar();
+    } 
+    else {
+        ImGui::Dummy(ImVec2(0, 100));
+        ImGui::SetCursorPosX(50);
+        ImGui::TextDisabled("This section is under construction...");
+    }
+
+    // --- CREATE PROJECT OVERLAY ---
+    // If flag is active, render the Create Form INSTEAD of using a Popup
+    if (showNewProjectModal) {
+        // [1] DIMMER BACKGROUND
+        // Render a full-screen invisible window with a semi-transparent background to block input to the Hub
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+        ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.7f));
+        ImGui::Begin("##Dimmer", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+        ImGui::End();
+        ImGui::PopStyleColor();
+
+        // [2] CREATE PROJECT WINDOW (Floating, Centered)
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(600, 450));
+        
+        // Styling for the Modal
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f); // Make input fields nicer
+        
+        // Use ImGui::Begin() to create a true floating window
+        // Note: We use a unique name to ensure it's treated as a new window
+        ImGui::Begin("Create New Project", &showNewProjectModal, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking);
+        
+        ImGui::SetWindowFontScale(1.3f);
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "Create New Project");
+        ImGui::SetWindowFontScale(1.0f);
+        
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 20));
+        
+        ImGui::Text("Project Name");
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::PushItemWidth(-1);
+        
+        // Ensure buffer is valid
+        if (projectNameBuffer != nullptr) {
+             ImGui::InputTextWithHint("##Name", "Enter project name...", projectNameBuffer, 128);
+        }
+        
+        ImGui::PopItemWidth();
+        
+        ImGui::Dummy(ImVec2(0, 20));
+        ImGui::Text("Project Location");
+        ImGui::Dummy(ImVec2(0, 5));
+        
+        ImGui::PushItemWidth(-120);
+        
+        // Safer String Copy
+        char pathBuf[256] = {0}; 
+        snprintf(pathBuf, sizeof(pathBuf), "%s", selectedPath.c_str());
+        
+        ImGui::InputText("##Path", pathBuf, 256, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemWidth();
+        
+        ImGui::SameLine();
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        // Trigger generic folder popup (which is robust)
+        if (ImGui::Button("Browse...", ImVec2(100, 0))) {
+            openFolderPopup = true; 
+        }
+        
+        ImGui::PopStyleColor();
+        ImGui::Dummy(ImVec2(0, 20));
+        
+        ImGui::Text("Project Template");
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        static int selectedTemplate = 0;
+        ImGui::RadioButton("First Person", &selectedTemplate, 0); 
+        ImGui::SameLine(200);
+        ImGui::RadioButton("Third Person", &selectedTemplate, 1);
+        ImGui::Dummy(ImVec2(0, 5));
+        
+        ImGui::RadioButton("Vehicle", &selectedTemplate, 2); 
+        ImGui::SameLine(200);
+        ImGui::RadioButton("Blank", &selectedTemplate, 3);
+        
+        ImGui::Dummy(ImVec2(0, 30));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        float buttonWidth = 150;
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth * 2 - 30);
+        
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
+            showNewProjectModal = false; // Just hide the overlay
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        
+        if (ImGui::Button("CREATE", ImVec2(buttonWidth, 40))) {
+            if (std::string(projectNameBuffer).empty()) {
+                // Warning logic...
+            } else {
+                LOG_INFO("Creating Project: " + std::string(projectNameBuffer));
+                currentState = AppState::EDITOR;
+                showCursor = false;
+                showNewProjectModal = false;
+            }
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::End(); // End Create Project Window
+        
+        ImGui::PopStyleVar(); // Pop WindowRounding (Create Project)
+        ImGui::PopStyleVar(); // Pop TitleBarRound (Create Project)
+        ImGui::PopStyleColor(); // Pop WindowBg (Create Project)
+    }
+
+
+    // Old Modal Logic Removed
+    
+    ImGui::EndChild();
+    ImGui::End();
+}
+
+// ==================================================================================
+//                          MODERN FOLDER BROWSER
+// ==================================================================================
+
+void EditorUI::RenderFolderBrowserModal() {
+    // [1] DIMMER
+    ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+    ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.7f));
+    ImGui::Begin("##DimmerFolder", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    ImGui::End();
+    ImGui::PopStyleColor();
+
+    // [2] BROWSER WINDOW
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(700, 500));
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
+    
+    // Use standard window, not popup
+    if (ImGui::Begin("Select Folder", &showFolderBrowser, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking)) {
+        
+        // --- HEADER ---
+        ImGui::SetWindowFontScale(1.3f);
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "Select Project Location");
+        ImGui::SetWindowFontScale(1.0f);
+        
+        ImGui::Dummy(ImVec2(0, 5));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        // --- DRIVE SHORTCUTS ---
+        ImGui::Text("Quick Access:");
+        ImGui::SameLine();
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        
+        // Tombol Drive (Manual karena filesystem C++ tidak punya deteksi drive cross-platform yang mudah)
+        if (ImGui::Button("C:", ImVec2(60, 30))) currentPath = "C:/";
+        ImGui::SameLine();
+        if (ImGui::Button("D:", ImVec2(60, 30))) currentPath = "D:/";
+        ImGui::SameLine();
+        if (ImGui::Button("E:", ImVec2(60, 30))) currentPath = "E:/";
+        ImGui::SameLine();
+        
+        // Tombol Home User
+        if (ImGui::Button("Home", ImVec2(80, 30))) {
+            #ifdef _WIN32
+            char* buf = nullptr;
+            size_t sz = 0;
+            if (_dupenv_s(&buf, &sz, "USERPROFILE") == 0 && buf != nullptr) {
+                currentPath = std::string(buf);
+                free(buf);
+            }
+            #else
+            const char* home = getenv("HOME");
+            if (home) currentPath = std::string(home);
+            #endif
+        }
+        
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        // --- NAVIGATION BAR ---
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.20f, 0.24f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        
+        // Tombol UP
+        if (ImGui::Button("â¬†UP", ImVec2(70, 32))) {
+            try {
+                fs::path p = currentPath;
+                if (p.has_parent_path() && p != p.root_path()) {
+                    currentPath = p.parent_path().string();
+                }
+            } catch (...) {}
+        }
+        
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        
+        // Kolom Path (Read Only)
+        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+        ImGui::PushItemWidth(-1);
+        
+        char pathDisplay[512] = {0};
+        if (currentPath.length() < 512) {
+             #ifdef _WIN32
+             strncpy_s(pathDisplay, currentPath.c_str(), 511);
+             #else
+             strncpy(pathDisplay, currentPath.c_str(), 511);
+             #endif
+        }
+
+        ImGui::InputText("##CurrentPath", pathDisplay, 512, ImGuiInputTextFlags_ReadOnly);
+        ImGui::PopItemWidth();
+        ImGui::PopStyleColor();
+        
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 5));
+
+        // --- FOLDER LIST (CONTENT) ---
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 8.0f);
+        
+        // Area Scrollable
+        ImGui::BeginChild("FolderList", ImVec2(0, -90), true);
+        
+        try {
+            // Cek apakah path valid sebelum iterasi
+            if (fs::exists(currentPath) && fs::is_directory(currentPath)) {
+                bool anyFolders = false;
+                
+                // Iterasi folder dengan opsi skip_permission_denied
+                for (const auto& entry : fs::directory_iterator(currentPath, fs::directory_options::skip_permission_denied)) {
+                    // Hanya tampilkan direktori
+                    if (entry.is_directory()) {
+                        std::string dirName;
+                        try { 
+                            dirName = entry.path().filename().string(); 
+                        } catch (const std::exception& e) {
+                             LOG_WARN("Error reading filename: " + std::string(e.what()));
+                             continue; 
+                        } // Skip jika nama folder encoding error
+
+                        // Skip folder sistem / hidden (biasanya diawali titik atau $)
+                        if (dirName.empty() || dirName[0] == '$' || dirName[0] == '.') continue;
+
+                        anyFolders = true;
+                        std::string label =  dirName;
+                        
+                        // Style item list
+                        ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.5f));
+                        
+                        // Seleksi folder (Masuk ke dalam)
+                        if (ImGui::Selectable(label.c_str(), false, 0, ImVec2(0, 30))) {
+                            currentPath = entry.path().string();
+                        }
+                        ImGui::PopStyleVar();
+                        
+                        // Tooltip path lengkap saat hover
+                        if (ImGui::IsItemHovered()) {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("%s", entry.path().string().c_str());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                }
+                
+                if (!anyFolders) {
+                    ImGui::Dummy(ImVec2(0, 50));
+                    ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
+                    ImGui::TextDisabled("No folders found");
+                }
+            } else {
+                ImGui::Dummy(ImVec2(0, 50));
+                ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 80);
+                ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Invalid directory path");
+            }
+        } 
+        catch (...) {
+            // Catch-all block agar aplikasi TIDAK CRASH saat akses folder bermasalah
+            ImGui::Dummy(ImVec2(0, 50));
+            ImGui::SetCursorPosX(ImGui::GetWindowWidth() / 2 - 60);
+            ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Access Denied");
+            LOG_ERROR("Exception in Folder Browser (Read Directory)");
+        }
+        
+        ImGui::EndChild();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+
+        // --- FOOTER BUTTONS ---
+        ImGui::Dummy(ImVec2(0, 10));
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+
+        float buttonWidth = 180;
+        // Posisikan tombol di kanan bawah
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth * 2 - 30);
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 6.0f);
+        
+        // Tombol Cancel
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        if (ImGui::Button("CANCEL", ImVec2(buttonWidth, 40))) {
+            showFolderBrowser = false;
+        }
+        ImGui::PopStyleColor();
+        
+        ImGui::SameLine();
+        
+        // Tombol Select
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        if (ImGui::Button("âœ“ SELECT THIS FOLDER", ImVec2(buttonWidth, 40))) {
+            selectedPath = currentPath; // Simpan path ke variabel utama
+            showFolderBrowser = false;  // Tutup browser
+        }
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+
+        ImGui::End();
+    }
+    
+    // Kembalikan style rounding modal
+    ImGui::PopStyleVar();
+}
+
+// ==================================================================================
+//                          MODERN EDITOR WORKSPACE
+// ==================================================================================
+
+   void EditorUI::RenderEditorWorkspace(bool showCursor, float deltaTime, Camera& camera, ObjectPushConstant& selectedObject, std::vector<GameObject>& gameObjects, int& selectedIndex, VkDescriptorSet sceneTexture, std::function<void(int)> onSpawn, glm::vec2* outSceneSize, glm::vec2 textureSize) {
+    
+    // 1. Setup DockSpace
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+
+    if (firstRun) {
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+        ImGuiID dock_main_id = dockspace_id;
+        ImGuiID dock_up;
+        ImGuiID dock_down;
+        ImGuiID dock_left;
+        ImGuiID dock_right;
+
+        // Split Layout
+        ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.25f, &dock_down, &dock_up);
+        ImGui::DockBuilderSplitNode(dock_up, ImGuiDir_Left, 0.2f, &dock_left, &dock_main_id);
+        ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, &dock_right, &dock_main_id);
+
+        // Dock Windows
+        ImGui::DockBuilderDockWindow("Scene View", dock_main_id);
+        ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
+        ImGui::DockBuilderDockWindow("Inspector", dock_right);
+        ImGui::DockBuilderDockWindow("Console", dock_down);
+        ImGui::DockBuilderDockWindow("Toolbar", dock_up); // Put toolbar on top if possible or floating
+
+        ImGui::DockBuilderFinish(dockspace_id);
+        firstRun = false;
+    }
+
+    ImGui::DockSpaceOverViewport(dockspace_id, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
+    // [FIX] Define Gizmo Variables
+    static ImGuizmo::OPERATION currentGizmoOperation = ImGuizmo::TRANSLATE;
+    static ImGuizmo::MODE currentGizmoMode = ImGuizmo::WORLD;
+
+    // 2. Main Menu Bar
+    if (ImGui::BeginMainMenuBar()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.65f, 1.00f, 1.0f));
+        ImGui::Text("COGENT ENGINE");
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+        
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {}
+            if (ImGui::MenuItem("Exit", "Alt+F4")) exit(0);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Window")) {
+            ImGui::MenuItem("Scene", NULL, true);
+            ImGui::MenuItem("Inspector", NULL, true);
+            ImGui::MenuItem("Hierarchy", NULL, true);
+            ImGui::EndMenu();
+        }
+             
+        ImGui::SetCursorPosX(ImGui::GetWindowWidth() - 150);
+        ImGui::TextDisabled("%.1f FPS", 1.0f / deltaTime);
+        ImGui::EndMainMenuBar();
+    }
+
+    // 3. Toolbar (Top)
+    ImGui::Begin("Toolbar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar);
+        ImGui::Dummy(ImVec2(0, 4));
+        
+        // Gizmo Controls (Left)
+        ImGui::SameLine(10);
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
+        
+        // Use text representation since we don't have icons guaranteed
+        if (ImGui::Button(currentGizmoOperation == ImGuizmo::TRANSLATE ? "[T] Trans" : " T ", ImVec2(60, 30))) currentGizmoOperation = ImGuizmo::TRANSLATE;
+        ImGui::SameLine();
+        if (ImGui::Button(currentGizmoOperation == ImGuizmo::ROTATE ? "[R] Rot" : " R ", ImVec2(60, 30))) currentGizmoOperation = ImGuizmo::ROTATE;
+        ImGui::SameLine();
+        if (ImGui::Button(currentGizmoOperation == ImGuizmo::SCALE ? "[S] Scale" : " S ", ImVec2(60, 30))) currentGizmoOperation = ImGuizmo::SCALE;
+        
+        ImGui::SameLine(220);
+        if (ImGui::Button(currentGizmoMode == ImGuizmo::LOCAL ? "Local" : "Global", ImVec2(60, 30))) {
+            currentGizmoMode = (currentGizmoMode == ImGuizmo::LOCAL) ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+        }
+        ImGui::PopStyleVar();
+
+        // Play Controls (Center)
+        ImGui::SameLine(ImGui::GetWindowWidth() / 2 - 65);
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+        if(ImGui::Button("PLAY", ImVec2(60, 30))) {}
+        ImGui::PopStyleColor();
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        if(ImGui::Button("STOP", ImVec2(60, 30))) {}
+        ImGui::PopStyleColor();
+        
+        // Debug Coordinates (Right)
+        ImGui::SameLine(ImGui::GetWindowWidth() - 250);
+        ImGui::TextDisabled("Cam: %.1f, %.1f, %.1f", camera.position.x, camera.position.y, camera.position.z);
+    ImGui::End();
+
+    // 4. Scene View (The Central Node)
+    // We render the texture here!
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0,0)); // No padding for image
+    ImGui::Begin("Scene View", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBackground);
+        
+        // [New] Input Logic
+        isSceneViewFocused = ImGui::IsWindowFocused();
+        // Get Window Size for Aspect Ratio
+        ImVec2 windowSize = ImGui::GetContentRegionAvail();
+        
+        // [FIX] Return Scene Size for Aspect Ratio Correction
+        if (outSceneSize) {
+            outSceneSize->x = windowSize.x;
+            outSceneSize->y = windowSize.y;
+        }
+
+
+
+        if (sceneTexture) {
+            // [FIX] UV Calculation for Dynamic Viewport
+            // We only display the portion of the G-Buffer that we actually rendered to (the top-left corner)
+            ImVec2 uv0 = ImVec2(0, 0);
+            ImVec2 uv1 = ImVec2(1, 1);
+            
+            if (textureSize.x > 0 && textureSize.y > 0) {
+                uv1.x = windowSize.x / textureSize.x;
+                uv1.y = windowSize.y / textureSize.y;
+                
+                // Safety Clamp (Don't sample outside texture)
+                if (uv1.x > 1.0f) uv1.x = 1.0f;
+                if (uv1.y > 1.0f) uv1.y = 1.0f;
+            }
+
+            ImGui::Image((ImTextureID)sceneTexture, windowSize, uv0, uv1);
+        } else {
+             ImGui::TextDisabled("No Scene Texture Available");
+        }
+        
+        // Gizmo Logic inside Scene Window
+        if (showCursor) {
+            ImGuizmo::SetDrawlist();
+            ImGuizmo::Enable(true);
+            
+            ImVec2 windowPos = ImGui::GetWindowPos();
+            ImVec2 windowSize = ImGui::GetWindowSize();
+            ImGuizmo::SetRect(windowPos.x, windowPos.y, windowSize.x, windowSize.y);
+
+            // Calculate formatted Camera Matrices
+            glm::mat4 viewMatrix = camera.getViewMatrix();
+            glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), windowSize.x / windowSize.y, 0.1f, 1000.0f);
+            projectionMatrix[1][1] *= -1; 
+            
+            // Removed ImGuizmo::DrawGrid since we now have a native 3D Grid Pipeline
+
+            ImGuizmo::Manipulate(
+                glm::value_ptr(viewMatrix),
+                glm::value_ptr(projectionMatrix),
+                currentGizmoOperation,
+                currentGizmoMode,
+                glm::value_ptr(selectedObject.model)
+            );
+        }
+
+        // [FIX] Spawn Context Menu (Inside Scene View)
+        // Now safe because we are inside NewFrame() and inside a Window
+        if (showCursor && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && ImGui::IsWindowHovered()) {
+            ImGui::OpenPopup("SpawnContext");
+        }
+
+        if (ImGui::BeginPopup("SpawnContext")) {
+            ImGui::Text("Add Object");
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Cube"))    { if(onSpawn) onSpawn(0); }
+            if (ImGui::MenuItem("Sphere"))  { if(onSpawn) onSpawn(1); }
+            if (ImGui::MenuItem("Capsule")) { if(onSpawn) onSpawn(2); }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Sun (Light)")) { if(onSpawn) onSpawn(3); } // [FIX] Add Sun
+            
+            ImGui::EndPopup();
+        }
+
+    ImGui::End();
+    ImGui::PopStyleVar(); // [FIX] Pop WindowPadding pushed at line 888
+    // Setup for Gizmo Logic
+    // 5. Inspector Panel
+    ImGui::Begin("Inspector");
+        if (selectedObject.id != -1 && selectedIndex >= 0 && selectedIndex < gameObjects.size()) {
+            // [NEW] Object Header like Unity
+            bool isActive = true;
+            ImGui::Checkbox("##Active", &isActive);
+            ImGui::SameLine();
+            ImGui::SetWindowFontScale(1.2f);
+            ImGui::Text("%s", gameObjects[selectedIndex].name.c_str());
+            ImGui::SetWindowFontScale(1.0f);
+            
+            ImGui::Dummy(ImVec2(0, 10));
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 10));
+            
+            // Transform Section
+            if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
+                // Decompose matrix to display values in DragFloat
+                float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+                ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(selectedObject.model), matrixTranslation, matrixRotation, matrixScale);
+                
+                bool valuesChanged = false;
+                
+                ImGui::PushItemWidth(-1);
+                ImGui::Text("Position");
+                if (ImGui::DragFloat3("##pos", matrixTranslation, 0.1f)) valuesChanged = true;
+                
+                ImGui::Dummy(ImVec2(0, 5));
+                ImGui::Text("Rotation");
+                if (ImGui::DragFloat3("##rot", matrixRotation, 0.1f)) valuesChanged = true;
+                
+                ImGui::Dummy(ImVec2(0, 5));
+                ImGui::Text("Scale");
+                if (ImGui::DragFloat3("##scl", matrixScale, 0.1f)) valuesChanged = true;
+                ImGui::PopItemWidth();
+                
+                // Recompose matrix if values changed via UI
+                if (valuesChanged) {
+                    ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, glm::value_ptr(selectedObject.model));
+                }
+            }
+            
+            ImGui::Dummy(ImVec2(0, 15));
+
+            // Material Section
+            if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Text("Albedo Color");
+                ImGui::ColorEdit4("##picker", glm::value_ptr(selectedObject.color));
+            }
+
+            ImGui::Dummy(ImVec2(0, 30));
+            
+            // Add Component Button
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 10));
+            float btnWidth = 200.0f;
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - btnWidth) * 0.5f);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+            if (ImGui::Button("Add Component", ImVec2(btnWidth, 35))) {
+                // Dummy for now
+            }
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::TextDisabled("No object selected.");
+            ImGui::Dummy(ImVec2(0, 20));
+            ImGui::SetWindowFontScale(1.1f);
+            ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.00f, 1.0f), "SCENE SETTINGS");
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 10));
+            
+            if (ImGui::CollapsingHeader("Environment", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Text("Background Color");
+                ImGui::ColorEdit3("##bg_color", glm::value_ptr(sceneBackgroundColor));
+            }
+        }
+    ImGui::End();
+
+    // 6. Hierarchy Panel
+    RenderHierarchy(gameObjects, selectedIndex, camera, onSpawn);
+
+    // 7. Console Panel
+    RenderConsole();
+}
+
+// Tambahkan parameter list object dan index yang dipilih
+void EditorUI::RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex, Camera& camera, std::function<void(int)> onSpawn) {
+    ImGui::Begin("Hierarchy");
+    
+    // Search Bar
+    ImGui::PushItemWidth(-1);
+    ImGui::InputTextWithHint("##HierarchySearch", "Search...", hierarchySearchBuffer, 128);
+    ImGui::PopItemWidth();
+    ImGui::Dummy(ImVec2(0, 5));
+    
+    // [New] Explicit Create Button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+    if (ImGui::Button("+ Add Object", ImVec2(-1, 0))) {
+        ImGui::OpenPopup("HierarchyContextMenu");
+    }
+    ImGui::PopStyleColor();
+    ImGui::Separator();
+    
+    // [New] Context Menu
+    if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !ImGui::IsAnyItemHovered()) {
+        ImGui::OpenPopup("HierarchyContextMenu");
+    }
+
+    if (ImGui::BeginPopup("HierarchyContextMenu")) {
+        ImGui::TextDisabled("Create Object");
+        ImGui::Separator();
+        if (ImGui::MenuItem("Cube")) { if(onSpawn) onSpawn(0); }
+        if (ImGui::MenuItem("Sphere")) { if(onSpawn) onSpawn(1); }
+        if (ImGui::MenuItem("Capsule")) { if(onSpawn) onSpawn(2); } 
+        ImGui::Separator();
+        if (ImGui::MenuItem("Sun Light")) { if(onSpawn) onSpawn(3); } 
+        ImGui::EndPopup();
+    }
+    
+    ImGui::BeginChild("HierarchyList", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    
+    // Loop semua object
+    std::string searchStr = hierarchySearchBuffer;
+    // convert to lowercase for case-insensitive search
+    for (char& c : searchStr) c = std::tolower(c);
+    
+    for (int i = 0; i < objects.size(); i++) {
+        std::string objNameLower = objects[i].name;
+        for (char& c : objNameLower) c = std::tolower(c);
+        
+        // Filter logic
+        if (!searchStr.empty() && objNameLower.find(searchStr) == std::string::npos) {
+            continue;
+        }
+        
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+        if (selectedIndex == i) {
+            flags |= ImGuiTreeNodeFlags_Selected;
+        }
+
+        // Determine icon based on object type or name (simple logic)
+        std::string icon = "[O]"; // Default icon
+        if (objects[i].name.find("Light") != std::string::npos || objects[i].name.find("Sun") != std::string::npos) {
+            icon = "[*]";
+        }
+
+        std::string label = icon + " " + objects[i].name;
+        ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "%s", label.c_str());
+
+        if (ImGui::IsItemClicked()) {
+            selectedIndex = i;
+            
+            // [New] Focus Camera on Click
+            glm::vec3 objPos = glm::vec3(objects[i].model[3]);
+            camera.Focus(objPos, 5.0f);
+        }
+    }
+    
+    // Klik area kosong untuk unselect
+    if (ImGui::IsMouseDown(0) && ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered()) {
+        selectedIndex = -1;
+    }
+    
+    ImGui::EndChild();
+    ImGui::End();
+}
+
+void EditorUI::RenderConsole() {
+    ImGui::Begin("Console");
+    if (ImGui::Button("Clear")) consoleLogs.clear();
+    ImGui::SameLine();
+    ImGui::Text("Log Count: %zu", consoleLogs.size());
+    ImGui::Separator();
+    
+    ImGui::BeginChild("ScrollingRegion", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    for (const auto& log : consoleLogs) {
+        ImVec4 color = ImVec4(1,1,1,1);
+        if (log.find("[INFO]") != std::string::npos) color = ImVec4(1,1,1,1);
+        else if (log.find("[WARN]") != std::string::npos) color = ImVec4(1,1,0,1);
+        else if (log.find("[ERROR]") != std::string::npos) color = ImVec4(1,0.4f,0.4f,1);
+        else if (log.find("[FATAL]") != std::string::npos) color = ImVec4(1,0,0,1);
+        
+        ImGui::PushStyleColor(ImGuiCol_Text, color);
+        ImGui::TextUnformatted(log.c_str());
+        ImGui::PopStyleColor();
+    }
+    
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+        
+    ImGui::EndChild();
+    ImGui::End();
+}
