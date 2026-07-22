@@ -31,6 +31,7 @@ D:\MyProject\Backup_COGENT_ENGINE\Renderer\ShadowPass.cpp;D:\MyProject\Backup_CO
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\Lighting\LightCulling.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\LightCulling.obj
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\ScreenSpaceShadows.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ScreenSpaceShadows.obj
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\SSAO.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\SSAO.obj
+D:\MyProject\Backup_COGENT_ENGINE\Renderer\TAAPass.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\TAAPass.obj
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\VisibilitySystem.obj
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\InstanceBuffer.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\InstanceBuffer.obj
 D:\MyProject\Backup_COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ANSRPass.obj

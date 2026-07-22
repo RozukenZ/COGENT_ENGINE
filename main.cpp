@@ -23,10 +23,12 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    CogentEngine app;
-
     try {
-        app.run();
+        LOG_INFO("Creating CogentEngine instance...");
+        CogentEngine* app = new CogentEngine();
+        LOG_INFO("CogentEngine instance created. Running app...");
+        app->run();
+        delete app;
     } catch (const std::exception& e) {
         LOG_ERROR("FATAL ERROR: " + std::string(e.what()));
 #ifdef _WIN32

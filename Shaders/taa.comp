@@ -1,0 +1,83 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(set = 0, binding = 0) uniform sampler2D currentColor;
+layout(set = 0, binding = 1) uniform sampler2D historyColor;
+layout(set = 0, binding = 2) uniform sampler2D velocityMap;
+layout(set = 0, binding = 3, rgba16f) uniform writeonly image2D outputImage;
+
+// Helper: RGB to YCoCg
+vec3 RGBToYCoCg(vec3 rgb) {
+    float Y  = dot(rgb, vec3(0.25, 0.5, 0.25));
+    float Co = dot(rgb, vec3(0.5, 0.0, -0.5));
+    float Cg = dot(rgb, vec3(-0.25, 0.5, -0.25));
+    return vec3(Y, Co, Cg);
+}
+
+// Helper: YCoCg to RGB
+vec3 YCoCgToRGB(vec3 ycocg) {
+    float Y = ycocg.x;
+    float Co = ycocg.y;
+    float Cg = ycocg.z;
+    return vec3(Y + Co - Cg, Y + Cg, Y - Co - Cg);
+}
+
+void main() {
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outputImage);
+    
+    if (texelCoord.x >= size.x || texelCoord.y >= size.y)
+        return;
+
+    vec2 texelSize = 1.0 / vec2(size);
+    vec2 uv = (vec2(texelCoord) + 0.5) * texelSize;
+
+    // 1. Fetch current frame color
+    vec3 current = texture(currentColor, uv).rgb;
+
+    // 2. Fetch velocity
+    vec2 velocity = texture(velocityMap, uv).rg;
+
+    // 3. Compute reprojection UV
+    vec2 historyUV = uv - velocity;
+
+    // 4. Fetch history color
+    vec3 history = texture(historyColor, historyUV).rgb;
+
+    // 5. Neighborhood Clamping (to prevent ghosting)
+    vec3 minColor = current;
+    vec3 maxColor = current;
+    
+    // Convert to YCoCg for better clamping
+    vec3 currentYCoCg = RGBToYCoCg(current);
+    vec3 minYCoCg = currentYCoCg;
+    vec3 maxYCoCg = currentYCoCg;
+
+    for (int y = -1; y <= 1; ++y) {
+        for (int x = -1; x <= 1; ++x) {
+            if (x == 0 && y == 0) continue;
+            vec2 sampleUV = uv + vec2(x, y) * texelSize;
+            vec3 neighbor = texture(currentColor, sampleUV).rgb;
+            vec3 neighborYCoCg = RGBToYCoCg(neighbor);
+            
+            minYCoCg = min(minYCoCg, neighborYCoCg);
+            maxYCoCg = max(maxYCoCg, neighborYCoCg);
+        }
+    }
+
+    vec3 historyYCoCg = RGBToYCoCg(history);
+    historyYCoCg = clamp(historyYCoCg, minYCoCg, maxYCoCg);
+    history = YCoCgToRGB(historyYCoCg);
+
+    // 6. Blend (Temporal accumulation)
+    float blendFactor = 0.1; // 10% new, 90% history
+    if (historyUV.x < 0.0 || historyUV.x > 1.0 || historyUV.y < 0.0 || historyUV.y > 1.0) {
+        blendFactor = 1.0; // Out of bounds, completely replace
+    }
+
+    vec3 finalColor = mix(history, current, blendFactor);
+
+    // 7. Write output
+    imageStore(outputImage, texelCoord, vec4(finalColor, 1.0));
+}

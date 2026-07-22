@@ -27,57 +27,95 @@ void GBuffer::init() {
     createAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, normal);
     createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, albedo);
     createAttachment(VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, material);
+    createAttachment(VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, velocity);
     
     // Depth attachment
     createAttachment(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, depth);
 
     // Populate attachments vector for easy access
-    attachments.resize(5);
-    attachments[0] = position;
-    attachments[1] = normal;
-    attachments[2] = albedo;
-    attachments[3] = material;
-    attachments[4] = depth;
+    attachments.clear();
+    attachments.push_back(position);
+    attachments.push_back(normal);
+    attachments.push_back(albedo);
+    attachments.push_back(material);
+    attachments.push_back(velocity);
+    attachments.push_back(depth);
 
     // 2. Create Render Pass
-    std::array<VkAttachmentDescription, 5> attachments = {};
+    std::array<VkAttachmentDescription, 6> attachments = {};
     
-    // Common Color Attachment Setup
-    for (int i = 0; i < 4; ++i) {
-        attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachments[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachments[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachments[i].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
+    // Position
     attachments[0].format = position.format;
-    attachments[1].format = normal.format;
-    attachments[2].format = albedo.format;
-    attachments[3].format = material.format;
+    attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[0].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    // Depth Setup
-    attachments[4].format = depth.format;
+    // Normal
+    attachments[1].format = normal.format;
+    attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // Albedo
+    attachments[2].format = albedo.format;
+    attachments[2].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[2].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[2].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[2].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[2].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[2].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[2].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    
+    // Material
+    attachments[3].format = material.format;
+    attachments[3].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[3].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[3].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[3].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[3].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[3].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[3].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    // Velocity
+    attachments[4].format = velocity.format;
     attachments[4].samples = VK_SAMPLE_COUNT_1_BIT;
     attachments[4].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     attachments[4].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachments[4].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachments[4].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachments[4].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachments[4].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    attachments[4].finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    VkAttachmentReference colorRefs[4] = {
+    // Depth
+    attachments[5].format = depth.format;
+    attachments[5].samples = VK_SAMPLE_COUNT_1_BIT;
+    attachments[5].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    attachments[5].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[5].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[5].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[5].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[5].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference colorRefs[5] = {
         {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
         {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
         {2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
-        {3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
+        {3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL},
+        {4, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}
     };
-    VkAttachmentReference depthRef = {4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+    VkAttachmentReference depthRef = {5, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 4;
+    subpass.colorAttachmentCount = 5;
     subpass.pColorAttachments = colorRefs;
     subpass.pDepthStencilAttachment = &depthRef;
 
@@ -113,7 +151,7 @@ void GBuffer::init() {
     }
 
     // 3. Create Framebuffer
-    std::array<VkImageView, 5> attachViews = { position.view, normal.view, albedo.view, material.view, depth.view };
+    std::array<VkImageView, 6> attachViews = { position.view, normal.view, albedo.view, material.view, velocity.view, depth.view };
     VkFramebufferCreateInfo fbufInfo = {};
     fbufInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fbufInfo.renderPass = renderPass;

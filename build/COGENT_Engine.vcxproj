@@ -416,6 +416,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\Lighting\LightCulling.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\ScreenSpaceShadows.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\SSAO.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\TAAPass.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\Visibility\VisibilitySystem.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\InstanceBuffer.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Renderer\ANSR\ANSRPass.cpp" />

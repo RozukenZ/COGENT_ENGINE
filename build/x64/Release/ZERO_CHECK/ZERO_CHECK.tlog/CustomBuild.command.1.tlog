@@ -1,0 +1,10 @@
+^D:\MYPROJECT\BACKUP_COGENT_ENGINE\BUILD\CMAKEFILES\D6838AC3CC592885AD1F69BDAFFDCC8C\GENERATE.STAMP.RULE
+setlocal
+D:\CMake\bin\cmake.exe -SD:/MyProject/Backup_COGENT_ENGINE -BD:/MyProject/Backup_COGENT_ENGINE/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/MyProject/Backup_COGENT_ENGINE/build/COGENT_Engine.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

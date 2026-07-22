@@ -69,6 +69,7 @@ set(SOURCE_FILES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ScreenSpaceShadows.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/SSAO.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/TAAPass.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/Visibility/VisibilitySystem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/InstanceBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Renderer/ANSR/ANSRPass.cpp
@@ -102,11 +103,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VMA"
 )
 
-# 5. LINK LIBRARIES
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     Vulkan::Vulkan 
     "${GLFW_LIBRARY_DIR}/glfw3.lib"
 )
 
-# Copy Shaders ke folder Build otomatis (Opsional tapi berguna)
+add_executable(test_glfw test_glfw.cpp)
+target_link_libraries(test_glfw PRIVATE Vulkan::Vulkan "${GLFW_LIBRARY_DIR}/glfw3.lib")
+target_include_directories(test_glfw PRIVATE "${GLFW_INCLUDE_DIR}")
 # Dihapus karena shader sekarang di-embed ke dalam exe

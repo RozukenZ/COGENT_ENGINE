@@ -43,6 +43,7 @@
 #include "../Renderer/DeferredLightingPass.hpp"
 #include "../Renderer/ScreenSpaceShadows.hpp"
 #include "../Renderer/HDRPipeline.hpp"
+#include "../Renderer/TAAPass.hpp"
 
 // Forward Declarations
 class Scene;
@@ -144,6 +145,7 @@ private:
     std::unique_ptr<DeferredLightingPass> deferredLightingPass;
     std::unique_ptr<ScreenSpaceShadows> screenSpaceShadows;
     std::unique_ptr<Cogent::Renderer::SSAO> ssao;
+    std::unique_ptr<Cogent::Renderer::TAAPass> taaPass;
     std::unique_ptr<Cogent::Renderer::HDRPipeline> hdrPipeline;
     std::unique_ptr<Cogent::Graphics::ShaderSystem> shaderSystem;
     VkRenderPass lightingRenderPass;

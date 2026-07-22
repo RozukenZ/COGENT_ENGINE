@@ -178,6 +178,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{BEFBFF79-33B7-3B41-B1D5-82971E56AA4A}</Project>
       <Name>COGENT_Engine</Name>
     </ProjectReference>
+    <ProjectReference Include="D:\MyProject\Backup_COGENT_ENGINE\build\test_glfw.vcxproj">
+      <Project>{A2E2BD76-89F4-34CC-873B-2B0182C0BD57}</Project>
+      <Name>test_glfw</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

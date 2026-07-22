@@ -1,0 +1,27 @@
+[2026-07-22 11:52:55] [INFO] COGENT ENGINE STARTED
+[2026-07-22 11:52:55] [INFO] Bootstrapping System...
+[2026-07-22 11:52:55] [INFO] Bootstrapping System...
+[2026-07-22 11:52:57] [INFO] Job System Initialized
+[2026-07-22 11:52:57] [INFO] Checking GPU: Intel(R) UHD Graphics
+[2026-07-22 11:52:57] [INFO]   - Suitable!
+[2026-07-22 11:52:57] [INFO] Found GPU: Intel(R) UHD Graphics (Score: 16384)
+[2026-07-22 11:52:57] [INFO] Checking GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-07-22 11:52:57] [INFO]   - Suitable!
+[2026-07-22 11:52:57] [INFO] Found GPU: NVIDIA GeForce RTX 3050 Laptop GPU (Score: 33768)
+[2026-07-22 11:52:57] [INFO] RHI: Selected Best GPU: NVIDIA GeForce RTX 3050 Laptop GPU
+[2026-07-22 11:52:58] [INFO] Initializing G-Buffer...
+[2026-07-22 11:52:58] [INFO] GBuffer: Creating Attachment with size 1920x1080
+[2026-07-22 11:52:58] [INFO] GBuffer: Image created. MemReqs Size: 17694720
+[2026-07-22 11:52:58] [INFO] GBuffer: Creating Attachment with size 1920x1080
+[2026-07-22 11:52:58] [INFO] GBuffer: Image created. MemReqs Size: 17694720
+[2026-07-22 11:52:58] [INFO] GBuffer: Creating Attachment with size 1920x1080
+[2026-07-22 11:52:58] [INFO] GBuffer: Image created. MemReqs Size: 8847360
+[2026-07-22 11:52:58] [INFO] GBuffer: Creating Attachment with size 1920x1080
+[2026-07-22 11:52:58] [INFO] GBuffer: Image created. MemReqs Size: 8847360
+[2026-07-22 11:52:58] [INFO] GBuffer: Creating Attachment with size 1920x1080
+[2026-07-22 11:52:58] [INFO] GBuffer: Image created. MemReqs Size: 8847360
+[2026-07-22 11:52:58] [INFO] Loading Default White Texture...
+[2026-07-22 11:52:58] [INFO] Building Graphics Pipeline...
+[2026-07-22 11:52:58] [INFO] Generating Primitive Meshes...
+[2026-07-22 11:53:01] [ERROR] Failed to compile shader: Shaders/bloom_downsample.comp
+[2026-07-22 11:53:01] [ERROR] FATAL ERROR: glslc failed for Shaders/bloom_downsample.comp

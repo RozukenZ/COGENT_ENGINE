@@ -44,7 +44,7 @@ CogentEngine::CogentEngine()
     : graphicsDevice(true), 
       gBuffer(graphicsDevice, WIDTH, HEIGHT) 
 {
-    // Initialize other members if needed
+    LOG_INFO("CogentEngine constructor executed.");
 }
 
 void CogentEngine::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -192,9 +192,12 @@ void CogentEngine::initResources() {
 
     // Initialize SSS
     screenSpaceShadows = std::make_unique<ScreenSpaceShadows>(graphicsDevice, swapchainExtent);
-    // screenSpaceShadows->init(); // Removed: Called in constructor
     screenSpaceShadows->updateDescriptorSets(gBuffer.getDepthImageView(), textureSampler, uniformBuffer);
 
+    // Initialize TAA
+    taaPass = std::make_unique<Cogent::Renderer::TAAPass>(graphicsDevice, *pipelineCache);
+    taaPass->init(swapchainExtent);
+    
     LOG_INFO("Resources Initialized Successfully!");
 
     LOG_INFO("Initializing ImGui Editor UI...");
@@ -262,6 +265,7 @@ void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
     else obj.name = "Object " + std::to_string(obj.id);
     
     obj.model = glm::translate(glm::mat4(1.0f), position);
+    obj.prevModel = obj.model;
     if (obj.color == glm::vec4(0.0f)) // Only set default if not already set
         obj.color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); 
 
@@ -280,6 +284,11 @@ void CogentEngine::mainLoop() {
         // Update Streamer
         glm::vec3 camPos = mainCamera.position; 
         streamer->update(camPos, deltaTime);
+
+        // Update previous models for motion vectors
+        for (auto& obj : gameObjects) {
+            obj.prevModel = obj.model;
+        }
 
         glfwPollEvents();
 
@@ -928,6 +937,7 @@ void CogentEngine::buildRenderGraph() {
     renderGraph->registerImage("GBuffer_Position", gBuffer.getPositionImage(), gBuffer.getPositionImageView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     renderGraph->registerImage("GBuffer_Material", gBuffer.getMaterialImage(), gBuffer.getMaterialImageView(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     renderGraph->registerImage("GBuffer_Depth", gBuffer.getDepthImage(), gBuffer.getDepthImageView(), VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    renderGraph->registerImage("GBuffer_Velocity", gBuffer.getVelocityImage(), gBuffer.getVelocityImageView(), VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     
     if (screenSpaceShadows) {
         renderGraph->registerImage("SSS_Mask", screenSpaceShadows->getImage(), screenSpaceShadows->getOutputView(), VK_FORMAT_R8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
@@ -935,6 +945,10 @@ void CogentEngine::buildRenderGraph() {
     
     if (ssao) {
         renderGraph->registerImage("SSAO_Mask", ssao->getSSAOOutputImage(), ssao->getSSAOOutputView(), VK_FORMAT_R8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
+    }
+    
+    if (taaPass) {
+        renderGraph->registerImage("TAA_Output", taaPass->getOutputImage(), taaPass->getOutputView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_GENERAL);
     }
 
     RenderPassNode gbufferPass{};
@@ -944,6 +958,7 @@ void CogentEngine::buildRenderGraph() {
         {"GBuffer_Normal", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Position", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Material", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
+        {"GBuffer_Velocity", VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
         {"GBuffer_Depth", VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT}
     };
     gbufferPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
@@ -954,12 +969,13 @@ void CogentEngine::buildRenderGraph() {
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = swapchainExtent;
 
-        std::array<VkClearValue, 5> clearValues{};
-        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-        clearValues[2].color = {{editorUI.sceneBackgroundColor.x, editorUI.sceneBackgroundColor.y, editorUI.sceneBackgroundColor.z, 1.0f}}; 
-        clearValues[3].color = {{0.0f, 0.5f, 1.0f, 1.0f}}; // R=Metallic, G=Roughness, B=AO
-        clearValues[4].depthStencil = {1.0f, 0};           
+        std::array<VkClearValue, 6> clearValues{};
+        clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Position
+        clearValues[1].color = {{0.0f, 0.0f, 0.0f, 1.0f}}; // Normal
+        clearValues[2].color = {{editorUI.sceneBackgroundColor.x, editorUI.sceneBackgroundColor.y, editorUI.sceneBackgroundColor.z, 1.0f}}; // Albedo
+        clearValues[3].color = {{0.0f, 0.5f, 1.0f, 0.0f}}; // Material (R=Metallic, G=Roughness, B=AO, A=Unused)
+        clearValues[4].color = {{0.0f, 0.0f, 0.0f, 0.0f}}; // Velocity
+        clearValues[5].depthStencil = {1.0f, 0};           // Depth
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
@@ -1118,6 +1134,61 @@ void CogentEngine::buildRenderGraph() {
         vkCmdEndRenderPass(cmd);
     };
 
+    RenderPassNode taaNode{};
+    taaNode.name = "Temporal Anti-Aliasing";
+    taaNode.inputs = {
+        {"HDR_Color", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
+        {"GBuffer_Velocity", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
+        {"GBuffer_Depth", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+    };
+    taaNode.outputs = {
+        {"TAA_Output", VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
+        // We modify HDR_Color via transfer copy
+        {"HDR_Color", VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}
+    };
+    taaNode.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
+        if (taaPass && hdrPipeline) {
+            taaPass->updateDescriptorSets(hdrPipeline->getHDRView(), gBuffer.getVelocityImageView(), gBuffer.getDepthImageView());
+            taaPass->dispatch(cmd, swapchainExtent.width, swapchainExtent.height);
+            
+            // Memory barrier for TAA Output before copy
+            VkImageMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.image = taaPass->getOutputImage();
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.subresourceRange.baseMipLevel = 0;
+            barrier.subresourceRange.levelCount = 1;
+            barrier.subresourceRange.baseArrayLayer = 0;
+            barrier.subresourceRange.layerCount = 1;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            
+            // Copy TAA output back to HDR Image
+            VkImageCopy copyRegion{};
+            copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.srcSubresource.layerCount = 1;
+            copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.dstSubresource.layerCount = 1;
+            copyRegion.extent = {swapchainExtent.width, swapchainExtent.height, 1};
+            
+            vkCmdCopyImage(cmd, taaPass->getOutputImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           hdrPipeline->getHDRImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &copyRegion);
+                           
+            // Revert TAA Output layout for next frame's history read (GENERAL)
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+        }
+    };
+
     RenderPassNode bloomPass{};
     bloomPass.name = "Bloom Pass";
     bloomPass.inputs = {
@@ -1177,6 +1248,7 @@ void CogentEngine::buildRenderGraph() {
     renderGraph->addPass(ssaoPass);
     renderGraph->addPass(lightCullPass);
     renderGraph->addPass(lightingPass);
+    renderGraph->addPass(taaNode);
     renderGraph->addPass(bloomPass);
     renderGraph->addPass(tonemapPass);
 }

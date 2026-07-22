@@ -11,6 +11,8 @@ layout(location = 0) out vec3 fragPos;
 layout(location = 1) out vec3 fragColor;
 layout(location = 2) out vec3 fragNormal;
 layout(location = 3) out vec2 fragTexCoord;
+layout(location = 4) out vec4 currClipPos;
+layout(location = 5) out vec4 prevClipPos;
 
 // UBO Camera (Set 0) - Must match C++ CameraUBO struct exactly
 layout(set = 0, binding = 0) uniform CameraUBO {
@@ -25,16 +27,21 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 
 layout(push_constant) uniform PushConsts {
     mat4 model;
+    mat4 prevModel;
     vec4 color;
 } push;
 
 void main() {
     vec4 worldPos = push.model * vec4(inPosition, 1.0);
+    vec4 prevWorldPos = push.prevModel * vec4(inPosition, 1.0);
     
     fragPos = worldPos.xyz;
     fragColor = push.color.rgb * inColor; // Use push constant color * vertex color
     fragNormal = mat3(push.model) * inNormal;
     fragTexCoord = inTexCoord;
 
-    gl_Position = ubo.proj * ubo.view * worldPos;
+    currClipPos = ubo.proj * ubo.view * worldPos;
+    prevClipPos = ubo.prevProj * ubo.prevView * prevWorldPos;
+    
+    gl_Position = currClipPos;
 }

@@ -137,7 +137,9 @@ void GraphicsDevice::init(VkSurfaceKHR surface) {
 }
 
 GraphicsDevice::GraphicsDevice(bool enableValidation) : enableValidationLayers(enableValidation) {
+    LOG_INFO("GraphicsDevice constructor called.");
     createInstance();
+    LOG_INFO("Vulkan Instance Created.");
 }
 
 GraphicsDevice::~GraphicsDevice() {
@@ -173,18 +175,24 @@ void GraphicsDevice::createInstance() {
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    // Bypass glfwGetRequiredInstanceExtensions
+    LOG_INFO("Bypassing glfwGetRequiredInstanceExtensions...");
+    std::vector<const char*> extensions = {
+        "VK_KHR_surface",
+        "VK_KHR_win32_surface"
+    };
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = glfwExtensionCount;
-    createInfo.ppEnabledExtensionNames = glfwExtensions;
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
 
+    LOG_INFO("Calling vkCreateInstance...");
     if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create Vulkan Instance!");
     }
+    LOG_INFO("vkCreateInstance returned successfully.");
 }
 
 void GraphicsDevice::pickPhysicalDevice(VkSurfaceKHR surface) {

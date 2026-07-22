@@ -112,6 +112,7 @@ struct CameraUBO {
 // ==========================================
 struct ObjectPushConstant {
     glm::mat4 model;
+    glm::mat4 prevModel;
     alignas(16) glm::vec4 color; // Default color (RGBA) -> Color Wheel control
     int id; // Selection ID
     float metallic;
@@ -134,6 +135,7 @@ struct GlobalLightUBO {
 struct GameObject {
     std::string name;       // Name of the object (for editor)
     glm::mat4 model;        // Transform model (position, rotation, scale)
+    glm::mat4 prevModel;    // Previous transform model for Motion Vectors
     glm::vec4 color;        // Color for editor visualization
     int id;                 // Unique ID for picking
     int meshID;             // Added meshID to identify mesh type (0=Cube, 1=Sphere, etc.)
@@ -151,11 +153,17 @@ struct GameObject {
     ObjectPushConstant getPushConstant() const {
         ObjectPushConstant pc{};
         pc.model = model;
+        pc.prevModel = prevModel;
         pc.color = color;
         pc.id = id;
         pc.metallic = metallic;
         pc.roughness = roughness;
         return pc;
+    }
+    
+    void updateModelMatrix(const glm::mat4& newModel) {
+        prevModel = model;
+        model = newModel;
     }
 };
 
