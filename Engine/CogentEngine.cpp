@@ -979,6 +979,11 @@ void CogentEngine::buildRenderGraph() {
         renderGraph->registerImage("TAA_Output", taaPass->getOutputImage(), taaPass->getOutputView(), VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_GENERAL);
     }
 
+    // [FIX 1] Register Tonemap_Output so RenderGraph can insert proper barriers
+    if (hdrPipeline) {
+        renderGraph->registerImage("Tonemap_Output", hdrPipeline->getTonemappedImage(), hdrPipeline->getTonemappedView(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED);
+    }
+
     RenderPassNode gbufferPass{};
     gbufferPass.name = "GBuffer Pass";
     gbufferPass.outputs = {
@@ -1138,22 +1143,17 @@ void CogentEngine::buildRenderGraph() {
 
         vkCmdBeginRenderPass(cmd, &lightRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+        // [FIX 4] Use swapchainExtent for HDR buffer (full resolution). ImGui does UV-mapping.
         VkViewport viewportFullscreen{};
-        float vpWidth = renderingViewportSize.x;
-        float vpHeight = renderingViewportSize.y;
-        if(vpWidth > swapchainExtent.width) vpWidth = (float)swapchainExtent.width;
-        if(vpHeight > swapchainExtent.height) vpHeight = (float)swapchainExtent.height;
-        if(vpWidth < 1.0f) vpWidth = 1.0f; 
-        if(vpHeight < 1.0f) vpHeight = 1.0f;
-        viewportFullscreen.width = vpWidth;
-        viewportFullscreen.height = vpHeight;
+        viewportFullscreen.width = (float)swapchainExtent.width;
+        viewportFullscreen.height = (float)swapchainExtent.height;
         viewportFullscreen.minDepth = 0.0f;
         viewportFullscreen.maxDepth = 1.0f;
         vkCmdSetViewport(cmd, 0, 1, &viewportFullscreen);
 
         VkRect2D scissorFullscreen{};
         scissorFullscreen.offset = {0, 0};
-        scissorFullscreen.extent = {(uint32_t)vpWidth, (uint32_t)vpHeight};
+        scissorFullscreen.extent = swapchainExtent;
         vkCmdSetScissor(cmd, 0, 1, &scissorFullscreen);
 
         if (deferredLightingPass) {
@@ -1170,9 +1170,8 @@ void CogentEngine::buildRenderGraph() {
         {"GBuffer_Depth", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
     };
     taaNode.outputs = {
-        {"TAA_Output", VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
-        // We modify HDR_Color via transfer copy
-        {"HDR_Color", VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT}
+        {"TAA_Output", VK_IMAGE_LAYOUT_GENERAL, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT}
+        // We modify HDR_Color via transfer copy manually inside the pass
     };
     taaNode.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
         if (taaPass && hdrPipeline) {
@@ -1196,6 +1195,23 @@ void CogentEngine::buildRenderGraph() {
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
             
+            // [FIX] Manual transition for HDR_Color to TRANSFER_DST before copy
+            VkImageMemoryBarrier hdrPreCopyBarrier{};
+            hdrPreCopyBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            hdrPreCopyBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            hdrPreCopyBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            hdrPreCopyBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            hdrPreCopyBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            hdrPreCopyBarrier.image = hdrPipeline->getHDRImage();
+            hdrPreCopyBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            hdrPreCopyBarrier.subresourceRange.baseMipLevel = 0;
+            hdrPreCopyBarrier.subresourceRange.levelCount = 1;
+            hdrPreCopyBarrier.subresourceRange.baseArrayLayer = 0;
+            hdrPreCopyBarrier.subresourceRange.layerCount = 1;
+            hdrPreCopyBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            hdrPreCopyBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &hdrPreCopyBarrier);
+
             // Copy TAA output back to HDR Image
             VkImageCopy copyRegion{};
             copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1214,6 +1230,23 @@ void CogentEngine::buildRenderGraph() {
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+            // [FIX 2] Transition HDR Image back to SHADER_READ_ONLY for Bloom/Tonemap
+            VkImageMemoryBarrier hdrBarrier{};
+            hdrBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            hdrBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            hdrBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            hdrBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            hdrBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            hdrBarrier.image = hdrPipeline->getHDRImage();
+            hdrBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            hdrBarrier.subresourceRange.baseMipLevel = 0;
+            hdrBarrier.subresourceRange.levelCount = 1;
+            hdrBarrier.subresourceRange.baseArrayLayer = 0;
+            hdrBarrier.subresourceRange.layerCount = 1;
+            hdrBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            hdrBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &hdrBarrier);
         }
     };
 

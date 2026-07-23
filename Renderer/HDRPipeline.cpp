@@ -431,6 +431,10 @@ void HDRPipeline::createPipelines() {
     
     config.rasterizer.cullMode = VK_CULL_MODE_NONE;
     
+    // [FIX 3] Disable depth test for fullscreen tonemap (no depth attachment)
+    config.depthStencil.depthTestEnable = VK_FALSE;
+    config.depthStencil.depthWriteEnable = VK_FALSE;
+    
     config.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     config.dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     config.dynamicState.dynamicStateCount = static_cast<uint32_t>(config.dynamicStateEnables.size());
@@ -645,8 +649,9 @@ void HDRPipeline::executeTonemap(VkCommandBuffer cmd, VkExtent2D extent) {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = extent;
 
+    // [FIX 5] Magenta clear for debugging — if viewport is magenta, tonemap pass runs but shader doesn't write
     VkClearValue clearColor = {};
-    clearColor.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
+    clearColor.color = {{1.0f, 0.0f, 1.0f, 1.0f}}; 
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
