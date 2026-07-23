@@ -3,6 +3,8 @@
 #include <array>
 #include <random>
 #include "../Core/VulkanUtils.hpp"
+#include "../Core/EmbeddedShaders.hpp"
+#include "../Core/VulkanUtils.hpp"
 
 namespace Cogent {
 namespace Renderer {
@@ -441,7 +443,7 @@ void SSAO::init() {
     vkCreatePipelineLayout(m_device.getDevice(), &pipelineLayoutInfo, nullptr, &blurPipelineLayout);
 
     // Create shader modules and pipeline for SSAO
-    auto ssaoCode = VulkanUtils::readFile("Shaders/ssao.comp.spv");
+    auto ssaoCode = EmbeddedShaders::GetShader("ssao.comp.spv");
     VkShaderModule ssaoModule = VulkanUtils::createShaderModule(m_device.getDevice(), ssaoCode);
     VkPipelineShaderStageCreateInfo ssaoStageInfo{};
     ssaoStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -452,7 +454,7 @@ void SSAO::init() {
     vkDestroyShaderModule(m_device.getDevice(), ssaoModule, nullptr);
 
     // Create shader modules and pipeline for Blur
-    auto blurCode = VulkanUtils::readFile("Shaders/ssao_blur.comp.spv");
+    auto blurCode = EmbeddedShaders::GetShader("ssao_blur.comp.spv");
     VkShaderModule blurModule = VulkanUtils::createShaderModule(m_device.getDevice(), blurCode);
     VkPipelineShaderStageCreateInfo blurStageInfo{};
     blurStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

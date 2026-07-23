@@ -107,8 +107,7 @@ void main() {
     float ao = Material.b;
     
     if (length(Normal) < 0.01) {
-        outColor = vec4(0.05, 0.05, 0.08, 1.0);
-        return;
+        discard;
     }
 
     vec3 N = normalize(Normal);

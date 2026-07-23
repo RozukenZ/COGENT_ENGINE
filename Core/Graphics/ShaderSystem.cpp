@@ -4,6 +4,7 @@
 #include <sstream>
 #include <cstdlib>
 #include <stdexcept>
+#include "../EmbeddedShaders.hpp"
 
 namespace Cogent {
 namespace Graphics {
@@ -69,10 +70,14 @@ VkShaderModule ShaderSystem::getShaderModule(const std::string& shaderPath, cons
     // Try to load embedded first if no defines, else compile via glslc
     std::vector<char> code;
     if (defines.empty()) {
-        // Here we could try embedded shaders first. But for dynamic variants, let's just compile via glslc
-        // to keep it simple. If we want embedded fallback, we can use EmbeddedShaders::GetShader
-        // We'll just compile dynamically for now if the file exists.
-        code = compileShaderToSpirv(shaderPath, defines);
+        // Try embedded shaders first
+        std::string spvPath = shaderPath + ".spv";
+        code = EmbeddedShaders::GetShader(spvPath);
+        
+        if (code.empty()) {
+            LOG_WARN("Embedded shader not found: " + spvPath + ". Falling back to dynamic compilation.");
+            code = compileShaderToSpirv(shaderPath, defines);
+        }
     } else {
         code = compileShaderToSpirv(shaderPath, defines);
     }

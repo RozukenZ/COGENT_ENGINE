@@ -27,8 +27,8 @@ std::vector<char> RenderPipeline::readFile(const std::string& filename) {
 }
 
 void GridPipeline::init(VkDevice device, VkRenderPass renderPass, VkExtent2D extent, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
-    auto vertShaderCode = readFile("Shaders/grid.vert.spv");
-    auto fragShaderCode = readFile("Shaders/grid.frag.spv");
+    auto vertShaderCode = EmbeddedShaders::GetShader("grid.vert.spv");
+    auto fragShaderCode = EmbeddedShaders::GetShader("grid.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);
@@ -200,8 +200,8 @@ VkShaderModule RenderPipeline::createShaderModule(VkDevice device, const std::ve
 
 void RenderPipeline::init(VkDevice device, VkRenderPass renderPass, VkExtent2D extent, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts) {
     // 1. LOAD SHADERS
-    auto vertShaderCode = readFile("Shaders/gbuffer.vert.spv");
-    auto fragShaderCode = readFile("Shaders/gbuffer.frag.spv");
+    auto vertShaderCode = EmbeddedShaders::GetShader("gbuffer.vert.spv");
+    auto fragShaderCode = EmbeddedShaders::GetShader("gbuffer.frag.spv");
 
     VkShaderModule vertShaderModule = createShaderModule(device, vertShaderCode);
     VkShaderModule fragShaderModule = createShaderModule(device, fragShaderCode);

@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <array>
 #include "../Core/VulkanUtils.hpp"
+#include "../Core/EmbeddedShaders.hpp"
 
 
 ScreenSpaceShadows::ScreenSpaceShadows(GraphicsDevice& device, VkExtent2D extent) 
@@ -183,7 +184,7 @@ void ScreenSpaceShadows::updateDescriptorSets(VkImageView depthView, VkSampler d
 }
 
 void ScreenSpaceShadows::createPipeline() {
-    auto computeShaderCode = VulkanUtils::readFile("Shaders/sss.comp.spv");
+    auto computeShaderCode = EmbeddedShaders::GetShader("sss.comp.spv");
 
     VkShaderModule computeShaderModule = VulkanUtils::createShaderModule(device.getDevice(), computeShaderCode);
 

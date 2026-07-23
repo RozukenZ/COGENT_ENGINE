@@ -1,7 +1,9 @@
 #include "DeferredLightingPass.hpp"
-#include "../Core/VulkanUtils.hpp"
-#include "../Core/Logger.hpp"
+#include <stdexcept>
 #include <array>
+#include "../Core/VulkanUtils.hpp"
+#include "../Core/EmbeddedShaders.hpp"
+#include "../Core/Logger.hpp"
 
 DeferredLightingPass::DeferredLightingPass(GraphicsDevice& device, VkRenderPass renderPass, VkExtent2D extent)
     : device(device), renderPass(renderPass), extent(extent) {
@@ -24,7 +26,7 @@ void DeferredLightingPass::init(VkDescriptorSetLayout globalLayout, VkDescriptor
 }
 
 void DeferredLightingPass::createDescriptorSetLayout() {
-    std::array<VkDescriptorSetLayoutBinding, 5> bindings{};
+    std::array<VkDescriptorSetLayoutBinding, 6> bindings{};
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -186,8 +188,8 @@ void DeferredLightingPass::updateDescriptorSets(const GBuffer& gbuffer, VkImageV
 }
 
 void DeferredLightingPass::createPipeline(VkRenderPass renderPass) {
-    auto vertCode = VulkanUtils::readFile("Shaders/lighting.vert.spv");
-    auto fragCode = VulkanUtils::readFile("Shaders/lighting.frag.spv");
+    auto vertCode = EmbeddedShaders::GetShader("lighting.vert.spv");
+    auto fragCode = EmbeddedShaders::GetShader("lighting.frag.spv");
 
     VkShaderModule vertModule = VulkanUtils::createShaderModule(device.getDevice(), vertCode);
     VkShaderModule fragModule = VulkanUtils::createShaderModule(device.getDevice(), fragCode);

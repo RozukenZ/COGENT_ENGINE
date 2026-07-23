@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <array>
 #include "../../Core/VulkanUtils.hpp"
+#include "../../Core/EmbeddedShaders.hpp"
 #include "../../Core/Logger.hpp"
 
 namespace Cogent::Renderer {
@@ -142,7 +143,7 @@ namespace Cogent::Renderer {
     }
 
     void ANSRPass::createPipeline() {
-        auto computeShaderCode = VulkanUtils::readFile("Shaders/ANSR.comp.spv");
+        auto computeShaderCode = EmbeddedShaders::GetShader("ANSR.comp.spv");
 
         VkShaderModule computeShaderModule = VulkanUtils::createShaderModule(device.getDevice(), computeShaderCode);
 

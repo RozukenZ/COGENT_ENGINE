@@ -4,7 +4,7 @@
 #include "Core/Logger.hpp"
 
 #ifdef _WIN32
-#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+// #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #include <windows.h>
 #endif
 

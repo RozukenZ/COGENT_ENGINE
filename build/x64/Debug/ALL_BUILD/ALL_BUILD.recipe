@@ -8,6 +8,9 @@
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\COGENT_Engine.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_glfw.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\x64\Debug\ALL_BUILD</FullPath>
     </ProjectOutput>
   </ProjectOutputs>

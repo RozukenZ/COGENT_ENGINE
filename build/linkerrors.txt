@@ -1,0 +1,8 @@
+================================================================================
+Linker Errors
+Generated: 2026-07-23T01:41:26.235Z
+Total Errors: 1
+================================================================================
+
+[LNK4098] (MSVC)
+defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library [D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.vcxproj]

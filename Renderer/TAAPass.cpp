@@ -1,7 +1,8 @@
 #include "TAAPass.hpp"
-#include "../Core/VulkanUtils.hpp"
-#include <array>
 #include <stdexcept>
+#include <array>
+#include "../Core/VulkanUtils.hpp"
+#include "../Core/EmbeddedShaders.hpp"
 
 namespace Cogent {
 namespace Renderer {
@@ -207,7 +208,7 @@ void TAAPass::createPipelines() {
         throw std::runtime_error("Failed to create TAA pipeline layout");
     }
 
-    auto compCode = VulkanUtils::readFile("Shaders/taa.comp.spv");
+    auto compCode = EmbeddedShaders::GetShader("taa.comp.spv");
     VkShaderModule compModule = VulkanUtils::createShaderModule(m_device.getDevice(), compCode);
     VkPipelineShaderStageCreateInfo stageInfo{};
     stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

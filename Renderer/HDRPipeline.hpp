@@ -24,16 +24,23 @@ public:
     VkRenderPass getHDRRenderPass() const { return hdrRenderPass; }
     VkFramebuffer getHDRFramebuffer() const { return hdrFramebuffer; }
 
+    // Tonemapped Output (Final LDR image for Editor)
+    VkImage getTonemappedImage() const { return tonemappedImage; }
+    VkImageView getTonemappedView() const { return tonemappedView; }
+    VkRenderPass getTonemapRenderPass() const { return tonemapRenderPass; }
+    VkFramebuffer getTonemapFramebuffer() const { return tonemapFramebuffer; }
+
     // Execute Bloom Compute Shader
     void executeBloom(VkCommandBuffer cmd);
 
-    // Execute Tonemapping to Swapchain
-    void executeTonemap(VkCommandBuffer cmd, VkFramebuffer swapchainFramebuffer, VkExtent2D swapchainExtent);
+    // Execute Tonemapping to off-screen buffer
+    void executeTonemap(VkCommandBuffer cmd, VkExtent2D extent);
 
 private:
     void createHDRTarget(VkExtent2D extent);
     void createBloomResources(VkExtent2D extent);
-    void createPipelines(VkRenderPass swapchainRenderPass);
+    void createTonemapTarget(VkExtent2D extent);
+    void createPipelines();
     void createDescriptorSets();
     void cleanupResources();
 
@@ -48,6 +55,13 @@ private:
     VmaAllocation hdrAlloc = VK_NULL_HANDLE;
     VkRenderPass hdrRenderPass = VK_NULL_HANDLE;
     VkFramebuffer hdrFramebuffer = VK_NULL_HANDLE;
+
+    // Tonemap Target (Off-screen LDR)
+    VkImage tonemappedImage = VK_NULL_HANDLE;
+    VkImageView tonemappedView = VK_NULL_HANDLE;
+    VmaAllocation tonemappedAlloc = VK_NULL_HANDLE;
+    VkRenderPass tonemapRenderPass = VK_NULL_HANDLE;
+    VkFramebuffer tonemapFramebuffer = VK_NULL_HANDLE;
 
     // Bloom Resources
     VkImage bloomImage = VK_NULL_HANDLE;

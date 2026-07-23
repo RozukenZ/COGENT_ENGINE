@@ -209,7 +209,7 @@ void CogentEngine::initResources() {
                 indices.graphicsFamily.value(),
                 graphicsDevice.getGraphicsQueue(), lightingRenderPass, 2);
 
-    sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, gBuffer.getAlbedoView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, hdrPipeline->getTonemappedView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     LOG_INFO("Initializing Ray Tracer...");
     rayTracer.init(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), graphicsDevice.getCommandPool(), graphicsDevice.getGraphicsQueue(), swapchainExtent);
@@ -288,6 +288,28 @@ void CogentEngine::mainLoop() {
         // Update previous models for motion vectors
         for (auto& obj : gameObjects) {
             obj.prevModel = obj.model;
+        }
+
+        // Animate objects for TAA & Motion Vector Testing
+        if (currentState == AppState::EDITOR && !gameObjects.empty()) {
+            // Cube rotates slowly
+            if (gameObjects[0].meshID == 0) { // Center Cube
+                gameObjects[0].model = glm::rotate(glm::mat4(1.0f), currentFrame * 0.5f, glm::vec3(0.0f, 1.0f, 0.0f));
+            }
+            
+            // Lights (id 1 to 4) orbit around the cube
+            float radius = 3.5f;
+            float speed = 1.2f;
+            for (int i = 1; i <= 4 && i < gameObjects.size(); ++i) {
+                float angle = currentFrame * speed + (i * glm::half_pi<float>());
+                float x = std::cos(angle) * radius;
+                float z = std::sin(angle) * radius;
+                
+                // Bobbing up and down
+                float y = std::sin(currentFrame * 2.0f + i) * 1.0f;
+                
+                gameObjects[i].model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+            }
         }
 
         glfwPollEvents();
@@ -555,7 +577,7 @@ void CogentEngine::recreateSwapchain() {
 
     gBuffer.resize(swapchainExtent.width, swapchainExtent.height);
 
-    sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, gBuffer.getAlbedoView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    sceneDescriptorSet = ImGui_ImplVulkan_AddTexture(textureSampler, hdrPipeline->getTonemappedView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void CogentEngine::createLightingRenderPass() {
@@ -798,7 +820,13 @@ void CogentEngine::updateUniformBuffer() {
         lcUBO.zFar = ubo.zFar;
         lightCulling->updateUBO(lcUBO);
         
-        std::vector<PointLight> dummyLights; // Pass empty for now, or add some test lights later
+        std::vector<PointLight> dummyLights;
+        for (int i = 1; i <= 4 && i < gameObjects.size(); ++i) {
+            PointLight pl;
+            pl.positionAndRadius = glm::vec4(gameObjects[i].model[3].x, gameObjects[i].model[3].y, gameObjects[i].model[3].z, 5.0f);
+            pl.colorAndIntensity = gameObjects[i].color * 250.0f; // bright light
+            dummyLights.push_back(pl);
+        }
         lightCulling->updateLights(dummyLights);
     }
 }
@@ -1207,40 +1235,13 @@ void CogentEngine::buildRenderGraph() {
     tonemapPass.inputs = {
         {"HDR_Color", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
     };
+    tonemapPass.outputs = {
+        {"Tonemap_Output", VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT}
+    };
     tonemapPass.execute = [this](VkCommandBuffer cmd, uint32_t imageIndex) {
-        VkRenderPassBeginInfo toneRenderPassInfo{};
-        toneRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        toneRenderPassInfo.renderPass = lightingRenderPass; // We still use this as swapchain pass
-        toneRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex];
-        toneRenderPassInfo.renderArea.offset = {0, 0};
-        toneRenderPassInfo.renderArea.extent = swapchainExtent;
-
-        VkClearValue clearColor = {};
-        clearColor.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
-        toneRenderPassInfo.clearValueCount = 1;
-        toneRenderPassInfo.pClearValues = &clearColor;
-
-        vkCmdBeginRenderPass(cmd, &toneRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        
-        VkViewport viewportFullscreen{};
-        viewportFullscreen.width = (float)swapchainExtent.width;
-        viewportFullscreen.height = (float)swapchainExtent.height;
-        viewportFullscreen.minDepth = 0.0f;
-        viewportFullscreen.maxDepth = 1.0f;
-        vkCmdSetViewport(cmd, 0, 1, &viewportFullscreen);
-
-        VkRect2D scissorFullscreen{};
-        scissorFullscreen.offset = {0, 0};
-        scissorFullscreen.extent = swapchainExtent;
-        vkCmdSetScissor(cmd, 0, 1, &scissorFullscreen);
-
         if (hdrPipeline) {
-            hdrPipeline->executeTonemap(cmd, swapchainFramebuffers[imageIndex], swapchainExtent);
+            hdrPipeline->executeTonemap(cmd, swapchainExtent);
         }
-
-        editorUI.Draw(cmd);
-
-        vkCmdEndRenderPass(cmd);
     };
 
     renderGraph->addPass(gbufferPass);
@@ -1266,6 +1267,23 @@ void CogentEngine::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t i
     } else {
         LOG_ERROR("RenderGraph is not initialized!");
     }
+
+    // Now render ImGui to the swapchain
+    VkRenderPassBeginInfo uiRenderPassInfo{};
+    uiRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    uiRenderPassInfo.renderPass = lightingRenderPass; // Use swapchain pass
+    uiRenderPassInfo.framebuffer = swapchainFramebuffers[imageIndex];
+    uiRenderPassInfo.renderArea.offset = {0, 0};
+    uiRenderPassInfo.renderArea.extent = swapchainExtent;
+
+    VkClearValue clearColor = {};
+    clearColor.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
+    uiRenderPassInfo.clearValueCount = 1;
+    uiRenderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &uiRenderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    editorUI.Draw(commandBuffer);
+    vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("Failed to stop recording command buffer!");

@@ -451,6 +451,15 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         
         if (ImGui::Button("OPEN FROM DISK", ImVec2(200, 50))) { }
         
+        ImGui::SameLine();
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.2f, 0.8f, 1.0f));
+        if (ImGui::Button("TEST SCENE", ImVec2(200, 50))) {
+            LOG_INFO("Button [TEST SCENE] Clicked");
+            currentState = AppState::EDITOR;
+            showCursor = false;
+        }
+        ImGui::PopStyleColor();
+
         ImGui::PopStyleColor();
 
 

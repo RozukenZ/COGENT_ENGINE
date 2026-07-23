@@ -28,8 +28,8 @@ VkShaderModule LightingPass::createShaderModule(VkDevice device, const std::vect
 }
 
 void LightingPass::init(VkDevice device, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout, VkExtent2D extent) {
-    auto vertCode = readFile("Shaders/lighting.vert.spv");
-    auto fragCode = readFile("Shaders/lighting.frag.spv");
+    auto vertCode = EmbeddedShaders::GetShader("lighting.vert.spv");
+    auto fragCode = EmbeddedShaders::GetShader("lighting.frag.spv");
 
     VkShaderModule vertModule = createShaderModule(device, vertCode);
     VkShaderModule fragModule = createShaderModule(device, fragCode);

@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <array>
 #include "../../Core/VulkanUtils.hpp"
+#include "../../Core/EmbeddedShaders.hpp"
 
 namespace Cogent::Renderer {
 
@@ -108,7 +109,7 @@ namespace Cogent::Renderer {
         }
 
         // 5. Load Shader and Create Pipeline
-        auto computeShaderCode = VulkanUtils::readFile("Shaders/AutoExposure.comp.spv");
+        auto computeShaderCode = EmbeddedShaders::GetShader("AutoExposure.comp.spv");
         VkShaderModule computeShaderModule = VulkanUtils::createShaderModule(device.getDevice(), computeShaderCode);
 
         VkPipelineShaderStageCreateInfo computeShaderStageInfo{};

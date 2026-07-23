@@ -22,6 +22,12 @@ void HDRPipeline::cleanupResources() {
     if (hdrView) vkDestroyImageView(m_device.getDevice(), hdrView, nullptr);
     if (hdrImage) vmaDestroyImage(m_device.getAllocator(), hdrImage, hdrAlloc);
 
+    if (tonemapRenderPass) vkDestroyRenderPass(m_device.getDevice(), tonemapRenderPass, nullptr);
+    if (tonemapFramebuffer) vkDestroyFramebuffer(m_device.getDevice(), tonemapFramebuffer, nullptr);
+    if (tonemappedView) vkDestroyImageView(m_device.getDevice(), tonemappedView, nullptr);
+    if (tonemappedImage) vmaDestroyImage(m_device.getAllocator(), tonemappedImage, tonemappedAlloc);
+
+
     for (auto view : bloomMipViews) {
         if (view) vkDestroyImageView(m_device.getDevice(), view, nullptr);
     }
@@ -45,7 +51,8 @@ void HDRPipeline::init(VkExtent2D extent, VkRenderPass swapchainRenderPass) {
     m_extent = extent;
     createHDRTarget(extent);
     createBloomResources(extent);
-    createPipelines(swapchainRenderPass);
+    createTonemapTarget(extent);
+    createPipelines();
     createDescriptorSets();
 }
 
@@ -208,7 +215,112 @@ void HDRPipeline::createBloomResources(VkExtent2D extent) {
     vkCreateSampler(m_device.getDevice(), &samplerInfo, nullptr, &linearSampler);
 }
 
-void HDRPipeline::createPipelines(VkRenderPass swapchainRenderPass) {
+void HDRPipeline::createTonemapTarget(VkExtent2D extent) {
+    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+
+    // Image
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent = {extent.width, extent.height, 1};
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = format;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    if (vmaCreateImage(m_device.getAllocator(), &imageInfo, &allocInfo, &tonemappedImage, &tonemappedAlloc, nullptr) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Tonemapped image");
+    }
+
+    // View
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = tonemappedImage;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(m_device.getDevice(), &viewInfo, nullptr, &tonemappedView) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Tonemapped image view");
+    }
+
+    // Render Pass
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = format;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkSubpassDependency dependencies[2];
+    dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[0].dstSubpass = 0;
+    dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    dependencies[1].srcSubpass = 0;
+    dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 2;
+    renderPassInfo.pDependencies = dependencies;
+
+    if (vkCreateRenderPass(m_device.getDevice(), &renderPassInfo, nullptr, &tonemapRenderPass) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Tonemap Render Pass");
+    }
+
+    // Framebuffer
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = tonemapRenderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = &tonemappedView;
+    framebufferInfo.width = extent.width;
+    framebufferInfo.height = extent.height;
+    framebufferInfo.layers = 1;
+
+    if (vkCreateFramebuffer(m_device.getDevice(), &framebufferInfo, nullptr, &tonemapFramebuffer) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create Tonemap Framebuffer");
+    }
+}
+
+void HDRPipeline::createPipelines() {
     // 1. Bloom Compute Layout
     VkDescriptorSetLayoutBinding inputImageBinding{};
     inputImageBinding.binding = 0;
@@ -323,9 +435,9 @@ void HDRPipeline::createPipelines(VkRenderPass swapchainRenderPass) {
     config.dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     config.dynamicState.dynamicStateCount = static_cast<uint32_t>(config.dynamicStateEnables.size());
     config.dynamicState.pDynamicStates = config.dynamicStateEnables.data();
-    
+
     config.pipelineLayout = tonemapPipelineLayout;
-    config.renderPass = swapchainRenderPass;
+    config.renderPass = tonemapRenderPass;
     
     tonemapPipeline = m_pipelineCache.buildGraphicsPipeline("TonemapPipeline", config);
 }
@@ -525,19 +637,32 @@ void HDRPipeline::executeBloom(VkCommandBuffer cmd) {
     }
 }
 
-void HDRPipeline::executeTonemap(VkCommandBuffer cmd, VkFramebuffer swapchainFramebuffer, VkExtent2D swapchainExtent) {
+void HDRPipeline::executeTonemap(VkCommandBuffer cmd, VkExtent2D extent) {
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    // We expect the swapchainRenderPass to be passed, which is the main `lightingRenderPass` in CogentEngine
-    // but wait! Tonemap pass takes the HDR_Color and Bloom_Texture, and writes to Swapchain.
-    // So the RenderPass used should be `lightingRenderPass` which is LDR (Swapchain format).
-    // The problem is we need a reference to `lightingRenderPass`.
-    // We already get it via `init()` or we can just pass it. Oh, we passed `swapchainFramebuffer` directly.
-    // wait, we need the render pass itself for `VkRenderPassBeginInfo`.
-    // Let's assume Tonemapper uses its own render pass? No, swapchainFramebuffer implies it uses swapchainRenderPass.
+    renderPassInfo.renderPass = tonemapRenderPass;
+    renderPassInfo.framebuffer = tonemapFramebuffer;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = extent;
+
+    VkClearValue clearColor = {};
+    clearColor.color = {{0.0f, 0.0f, 0.0f, 1.0f}}; 
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(cmd, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     
-    // actually, let's just use dynamic rendering or let CogentEngine do vkCmdBeginRenderPass and then call `executeTonemap`.
-    // Yes! Let CogentEngine begin the render pass, and HDRPipeline just draws the full screen quad!
+    VkViewport viewportFullscreen{};
+    viewportFullscreen.width = (float)extent.width;
+    viewportFullscreen.height = (float)extent.height;
+    viewportFullscreen.minDepth = 0.0f;
+    viewportFullscreen.maxDepth = 1.0f;
+    vkCmdSetViewport(cmd, 0, 1, &viewportFullscreen);
+
+    VkRect2D scissorFullscreen{};
+    scissorFullscreen.offset = {0, 0};
+    scissorFullscreen.extent = extent;
+    vkCmdSetScissor(cmd, 0, 1, &scissorFullscreen);
     
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, tonemapPipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, tonemapPipelineLayout, 0, 1, &tonemapDescriptorSet, 0, nullptr);
@@ -546,6 +671,8 @@ void HDRPipeline::executeTonemap(VkCommandBuffer cmd, VkFramebuffer swapchainFra
     vkCmdPushConstants(cmd, tonemapPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float)*2, exposure);
     
     vkCmdDraw(cmd, 3, 1, 0, 0); // Triangle for fullscreen quad
+    
+    vkCmdEndRenderPass(cmd);
 }
 
 } // namespace Renderer
