@@ -40,6 +40,18 @@
 			"id" : "test_ai::@6890427a1f51a3e7e1df"
 		},
 		{
+			"id" : "test_performance::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_raytracing::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_nai_runtime::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_framegen::@6890427a1f51a3e7e1df"
+		},
+		{
 			"id" : "ZERO_CHECK::@6890427a1f51a3e7e1df"
 		}
 	],
@@ -65,6 +77,18 @@
 		},
 		{
 			"id" : "test_ai::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_performance::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_raytracing::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_nai_runtime::@6890427a1f51a3e7e1df"
+		},
+		{
+			"id" : "test_framegen::@6890427a1f51a3e7e1df"
 		}
 	],
 	"paths" : 

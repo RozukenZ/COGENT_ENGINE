@@ -148,3 +148,19 @@ target_link_libraries(test_visibility PRIVATE Threads::Threads)
 add_executable(test_ai test_ai.cpp Core/Logger.hpp)
 target_include_directories(test_ai PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(test_ai PRIVATE Threads::Threads)
+
+add_executable(test_performance test_performance.cpp Core/Diagnostics/FramePacer.cpp)
+target_include_directories(test_performance PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_performance PRIVATE Threads::Threads)
+
+add_executable(test_raytracing test_raytracing.cpp RayTracing/BVHBuilder.cpp)
+target_include_directories(test_raytracing PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}" "${GLM_INCLUDE_DIR}" ${Vulkan_INCLUDE_DIRS})
+target_link_libraries(test_raytracing PRIVATE Threads::Threads Vulkan::Vulkan)
+
+add_executable(test_nai_runtime test_nai_runtime.cpp AI/Runtime/NAIRuntime.cpp)
+target_include_directories(test_nai_runtime PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_nai_runtime PRIVATE Threads::Threads)
+
+add_executable(test_framegen test_framegen.cpp Renderer/NFG/NFGPass.cpp AI/Runtime/NAIRuntime.cpp Core/Diagnostics/FramePacer.cpp)
+target_include_directories(test_framegen PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_framegen PRIVATE Threads::Threads)
