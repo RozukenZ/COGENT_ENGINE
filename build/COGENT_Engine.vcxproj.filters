@@ -25,6 +25,9 @@
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Resources\Streaming\Streamer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Core\Memory\MemoryManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

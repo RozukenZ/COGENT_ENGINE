@@ -18,6 +18,7 @@ execute_process(
 
 # 1. Vulkan & Libraries
 find_package(Vulkan REQUIRED)
+find_package(Threads REQUIRED)
 
 # Setup Path SDK Manual
 set(GLFW_INCLUDE_DIR "D:/SDK/GLFW/glfw-3.4.bin.WIN64/include")
@@ -42,6 +43,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/VulkanUtils.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Camera.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Logger.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Memory/MemoryManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_draw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_demo.cpp
@@ -111,4 +113,38 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 add_executable(test_glfw test_glfw.cpp)
 target_link_libraries(test_glfw PRIVATE Vulkan::Vulkan "${GLFW_LIBRARY_DIR}/glfw3.lib")
 target_include_directories(test_glfw PRIVATE "${GLFW_INCLUDE_DIR}")
-# Dihapus karena shader sekarang di-embed ke dalam exe
+
+add_executable(test_cts test_cts.cpp)
+target_include_directories(test_cts PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_cts PRIVATE Threads::Threads)
+
+add_executable(test_res test_res.cpp 
+    Resources/Texture.cpp 
+    Resources/Streaming/Streamer.cpp
+    Core/Logger.hpp)
+target_include_directories(test_res PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Core/Graphics"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Vendor/VMA"
+    "${GLM_INCLUDE_DIR}"
+    "${TINYOBJ_INCLUDE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Geometry"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Scene"
+    ${Vulkan_INCLUDE_DIRS}
+)
+target_link_libraries(test_res PRIVATE Threads::Threads Vulkan::Vulkan)
+
+add_executable(test_visibility test_visibility.cpp 
+    Renderer/Visibility/VisibilitySystem.cpp
+    Core/Logger.hpp)
+target_include_directories(test_visibility PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${GLM_INCLUDE_DIR}"
+    ${Vulkan_INCLUDE_DIRS}
+)
+target_link_libraries(test_visibility PRIVATE Threads::Threads)
+
+add_executable(test_ai test_ai.cpp Core/Logger.hpp)
+target_include_directories(test_ai PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_ai PRIVATE Threads::Threads)

@@ -1,6 +1,7 @@
 #include "RenderGraph.hpp"
 #include <iostream>
 #include "../../Core/Logger.hpp"
+#include "../../Core/Diagnostics/Profiler.hpp"
 
 RenderGraph::RenderGraph(GraphicsDevice& device) : device(device) {}
 
@@ -98,6 +99,7 @@ void RenderGraph::addPass(RenderPassNode node) {
 }
 
 void RenderGraph::compile() {
+    PROFILE_FUNCTION();
     // Basic validation or sorting could go here
     for (auto& pass : passes) {
         if (pass.setup) {
@@ -107,6 +109,7 @@ void RenderGraph::compile() {
 }
 
 void RenderGraph::execute(VkCommandBuffer cmd, uint32_t imageIndex) {
+    PROFILE_FUNCTION();
     for (auto& pass : passes) {
         // 1. Pre-Pass Barriers (Transition Inputs & Outputs)
         // Check Inputs

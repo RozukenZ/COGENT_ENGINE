@@ -4,13 +4,15 @@
 #include <memory>
 #include <future>
 #include <mutex>
-#include "../Threading/JobSystem.hpp"
-#include "../../Resources/Texture.hpp" // Existing Texture class
-#include "../../Resources/Model.hpp"   // Existing Model class
-#include "../Logger.hpp"
+#include <shared_mutex>
+#include "../Core/Threading/JobSystem.hpp"
+#include "Texture.hpp" 
+#include "Model.hpp"   
+#include "../Core/Logger.hpp"
 
 namespace Cogent::Resources {
 
+    // Advanced Resource Manager with Read-Write locks and proper Garbage Collection
     class ResourceManager {
     public:
         static ResourceManager& Get() {
@@ -18,35 +20,43 @@ namespace Cogent::Resources {
             return instance;
         }
 
-        // Initialize with GPU pointers needed for loading
         void Init(VkDevice device, VkPhysicalDevice physicalDevice, VkCommandPool commandPool, VkQueue queue, Cogent::Resources::Streamer* streamerRef) {
             _device = device;
             _physicalDevice = physicalDevice;
             _commandPool = commandPool;
             _queue = queue;
             _streamer = streamerRef;
+            LOG_INFO("ResourceManager initialized.");
         }
 
-        // Request a texture (Async via Streamer)
+        // Get or Create Texture mapping
         std::shared_ptr<Texture> GetTexture(const std::string& path) {
-            std::lock_guard<std::mutex> lock(_mutex);
-            
-            if (_textures.find(path) != _textures.end()) {
-                return _textures[path];
+            {
+                std::shared_lock<std::shared_mutex> readLock(_rwMutex);
+                auto it = _textures.find(path);
+                if (it != _textures.end()) {
+                    return it->second;
+                }
             }
 
-            // Create new texture resource
+            // Not found, upgrade to unique lock
+            std::unique_lock<std::shared_mutex> writeLock(_rwMutex);
+            
+            // Double check in case another thread created it
+            auto it = _textures.find(path);
+            if (it != _textures.end()) {
+                return it->second;
+            }
+
             auto texture = std::make_shared<Texture>();
             texture->path = path;
-            
             _textures[path] = texture;
 
-            // Register with Streamer and Request Load
             if (_streamer) {
                 _streamer->registerResource(texture);
                 _streamer->requestLoad(texture);
             } else {
-                LOG_ERROR("Streamer not initialized in ResourceManager! Performing synchronous load.");
+                LOG_ERROR("Streamer offline. Falling back to synchronous texture load.");
                 texture->load(_device, _physicalDevice, _commandPool, _queue, path);
             }
 
@@ -59,17 +69,45 @@ namespace Cogent::Resources {
             }
         }
 
-    private:
-        ResourceManager() {}
+        // Garbage Collector: Unloads resources that have use_count == 1 (Only owned by Manager)
+        void UnloadUnused() {
+            std::unique_lock<std::shared_mutex> writeLock(_rwMutex);
+            
+            size_t beforeCount = _textures.size();
+            
+            for (auto it = _textures.begin(); it != _textures.end(); ) {
+                if (it->second.use_count() == 1) {
+                    LOG_INFO("Unloading unused resource: " + it->first);
+                    it->second->unload(); 
+                    it = _textures.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+            
+            if (_textures.size() < beforeCount) {
+                 LOG_INFO("Garbage Collection complete. Freed " + std::to_string(beforeCount - _textures.size()) + " resources.");
+            }
+        }
         
-        VkDevice _device;
-        VkPhysicalDevice _physicalDevice;
-        VkCommandPool _commandPool;
-        VkQueue _queue;
+        size_t GetActiveResourceCount() {
+            std::shared_lock<std::shared_mutex> readLock(_rwMutex);
+            return _textures.size();
+        }
+
+    private:
+        ResourceManager() = default;
+        ~ResourceManager() = default;
+        
+        VkDevice _device = VK_NULL_HANDLE;
+        VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+        VkCommandPool _commandPool = VK_NULL_HANDLE;
+        VkQueue _queue = VK_NULL_HANDLE;
         Cogent::Resources::Streamer* _streamer = nullptr;
 
         std::unordered_map<std::string, std::shared_ptr<Texture>> _textures;
-        std::mutex _mutex;
-        std::mutex _queueMutex; // Protect Vulkan Queue submission
+        
+        // C++17 shared_mutex for high performance concurrent reads
+        std::shared_mutex _rwMutex; 
     };
 }
