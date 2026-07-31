@@ -52,6 +52,21 @@
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\EditorUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\UIContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\CommandPalette.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\DockingSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\PropertyInspector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\NodeCanvas.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

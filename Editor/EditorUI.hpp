@@ -11,6 +11,9 @@
 #include <filesystem>
 #include "../Core/Types.hpp"
 #include "../Core/Camera.hpp"
+#include "UI/UIContext.hpp"
+#include "UI/PropertyInspector.hpp"
+#include "UI/NodeCanvas.hpp"
 
 enum class AppState {
     LOADING,
@@ -40,6 +43,7 @@ private:
     void RenderHierarchy(std::vector<GameObject>& objects, int& selectedIndex, Camera& camera, std::function<void(int)> onSpawn);
     void RenderConsole(); // [New]
     void RenderFolderBrowserModal(); 
+    void RenderSettingsPanel(); // [New] for Engine Settings
 
     VkDescriptorPool imguiPool;
     float loadingProgress = 0.0f;
@@ -62,6 +66,26 @@ private:
     bool openFolderPopup = false;   // Trigger untuk OpenPopup
     std::string currentPath = ".";  // [FIX] Default ke folder project biar aman
     std::string selectedPath = "."; // [FIX] Default ke folder project biar aman
+
+    // Settings State
+    bool showSettings = false;
+    int selectedSettingsTab = 0;
+    
+    // Config State (Graphics)
+    int config_RendererAPI = 0; // 0 = Vulkan
+    int config_GPUSelection = 0; // 0 = Auto
+    bool config_Fullscreen = false;
+    bool config_VSync = true;
+    bool config_RayTracing = true;
+    bool config_GlobalIllumination = true;
+    bool config_FrameGen = false;
+    int config_TextureQuality = 2; // High
+    float config_RenderScale = 1.0f;
+
+    // Phase 3 Modules
+    Cogent::Editor::UI::PropertyInspector propertyInspector;
+    Cogent::Editor::UI::NodeCanvas nodeCanvas;
+    bool showCommandPalette = false;
 
 public:
     // Scene Settings

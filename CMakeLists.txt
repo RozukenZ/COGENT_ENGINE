@@ -52,6 +52,11 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_tables.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/imgui/imgui_widgets.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Editor/EditorUI.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/UI/UIContext.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/UI/CommandPalette.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/UI/DockingSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/UI/PropertyInspector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Editor/UI/NodeCanvas.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Vendor/ImGuizmo/ImGuizmo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Geometry/PrimitiveMesh.hpp
@@ -164,3 +169,20 @@ target_link_libraries(test_nai_runtime PRIVATE Threads::Threads)
 add_executable(test_framegen test_framegen.cpp Renderer/NFG/NFGPass.cpp AI/Runtime/NAIRuntime.cpp Core/Diagnostics/FramePacer.cpp)
 target_include_directories(test_framegen PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(test_framegen PRIVATE Threads::Threads)
+
+add_executable(test_nvs test_nvs.cpp Scripting/NVS/NVSCompiler.cpp Scripting/NVS/NVSVM.cpp)
+target_include_directories(test_nvs PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_nvs PRIVATE Threads::Threads)
+
+add_executable(test_telemetry test_telemetry.cpp Core/Diagnostics/TelemetrySystem.cpp)
+target_include_directories(test_telemetry PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_telemetry PRIVATE Threads::Threads)
+
+add_executable(test_analyzer test_analyzer.cpp Core/Diagnostics/NXCompare.cpp Core/Diagnostics/TelemetrySystem.cpp)
+target_include_directories(test_analyzer PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_analyzer PRIVATE Threads::Threads)
+
+add_executable(test_has test_has.cpp Core/Diagnostics/HAS.cpp)
+target_include_directories(test_has PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(test_has PRIVATE Threads::Threads)
+

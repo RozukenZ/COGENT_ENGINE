@@ -8,5 +8,9 @@ D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_performance.dir
 D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_raytracing.dir
 D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_nai_runtime.dir
 D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_framegen.dir
+D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_nvs.dir
+D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_telemetry.dir
+D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_analyzer.dir
+D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/test_has.dir
 D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/ALL_BUILD.dir
 D:/MyProject/Backup_COGENT_ENGINE/build/CMakeFiles/ZERO_CHECK.dir

@@ -214,10 +214,9 @@ private:
     bool framebufferResized = false;
     
     // Constants
-    // Constants
     static constexpr uint32_t WIDTH = 1920;
     static constexpr uint32_t HEIGHT = 1080;
     
 public:
-    Camera mainCamera{glm::vec3(2.0f, 2.0f, 2.0f)}; // Public for callback access if needed, or use friend/accessor
+    Camera mainCamera{glm::vec3(0.0f, 5.0f, 5.0f)}; // Pointing back at 0,0,0
 };

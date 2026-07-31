@@ -15,6 +15,11 @@ D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui_impl_vulkan.cpp;D:\MyProjec
 D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_tables.obj
 D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\imgui_widgets.obj
 D:\MyProject\Backup_COGENT_ENGINE\Editor\EditorUI.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\EditorUI.obj
+D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\UIContext.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\UIContext.obj
+D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\CommandPalette.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\CommandPalette.obj
+D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\DockingSystem.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\DockingSystem.obj
+D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\PropertyInspector.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\PropertyInspector.obj
+D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\NodeCanvas.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\NodeCanvas.obj
 D:\MyProject\Backup_COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\ImGuizmo.obj
 D:\MyProject\Backup_COGENT_ENGINE\Geometry\PrimitiveMesh.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\PrimitiveMesh.obj
 D:\MyProject\Backup_COGENT_ENGINE\RayTracing\RayTracer.cpp;D:\MyProject\Backup_COGENT_ENGINE\build\COGENT_Engine.dir\Debug\RayTracer.obj

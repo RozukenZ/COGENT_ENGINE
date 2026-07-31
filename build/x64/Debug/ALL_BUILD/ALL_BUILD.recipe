@@ -8,7 +8,43 @@
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\COGENT_Engine.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_ai.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_analyzer.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_cts.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_framegen.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_glfw.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_has.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_nai_runtime.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_nvs.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_performance.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_raytracing.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_res.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_telemetry.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Debug\test_visibility.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\x64\Debug\ALL_BUILD</FullPath>

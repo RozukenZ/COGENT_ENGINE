@@ -4,10 +4,15 @@
 #include <cmath>
 #include "ImGuizmo.h"
 #include "imgui_internal.h"
-#include <glm/gtc/type_ptr.hpp>
+#include <filesystem>
 #include "../Core/Types.hpp"
 #include "../Core/Camera.hpp"
 #include "../Core/Logger.hpp"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shobjidl.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -76,6 +81,26 @@ void EditorUI::Init(GLFWwindow* window, VkInstance instance, VkPhysicalDevice ph
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT; 
     
     ImGui_ImplVulkan_Init(&init_info);
+
+    // [Phase 3] Initialize UIContext
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    Cogent::Editor::UI::UIContext::Get().Initialize(static_cast<float>(width), static_cast<float>(height));
+
+    // Mock Commands
+    auto& cmd = Cogent::Editor::UI::UIContext::Get().GetCommandPalette();
+    cmd.RegisterCommand("file.save", "Save Scene", "Ctrl+S", [](){ LOG_INFO("Command: Save Scene Executed"); });
+    cmd.RegisterCommand("edit.undo", "Undo Action", "Ctrl+Z", [](){ LOG_INFO("Command: Undo Executed"); });
+    cmd.RegisterCommand("create.cube", "Create 3D Cube", "Ctrl+Shift+C", [](){ LOG_INFO("Command: Create Cube Executed"); });
+
+    // Mock Node Canvas
+    auto& nodeBegin = nodeCanvas.CreateNode("Event BeginPlay", {100.0f, 200.0f});
+    nodeCanvas.AddPinToNode(nodeBegin.id, "Exec Out", Cogent::Editor::UI::PinType::OUTPUT, Cogent::Editor::UI::DataType::EXEC);
+    
+    auto& nodePrint = nodeCanvas.CreateNode("Print String", {500.0f, 200.0f});
+    nodeCanvas.AddPinToNode(nodePrint.id, "Exec In", Cogent::Editor::UI::PinType::INPUT, Cogent::Editor::UI::DataType::EXEC);
+    nodeCanvas.AddPinToNode(nodePrint.id, "Message", Cogent::Editor::UI::PinType::INPUT, Cogent::Editor::UI::DataType::STRING);
+    nodeCanvas.ConnectPins(100, 101);
 }
 
 // [FIX] Parameter fungsi ditambahkan: onSpawn callback, outSceneSize, textureSize
@@ -91,6 +116,57 @@ void EditorUI::Update(AppState& currentState, bool& showCursor, float& deltaTime
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(viewport->Size);
     
+    // 8. Properties Inspector (Right)
+    propertyInspector.RenderImGui();
+    
+    // 9. NVS Studio Canvas
+    nodeCanvas.RenderImGui();
+
+    // 10. Floating Panels
+    // Check Global Shortcuts
+    if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().KeyShift && ImGui::IsKeyPressed(ImGuiKey_P)) {
+        showCommandPalette = true;
+    }
+
+    if (showCommandPalette) {
+        ImGui::OpenPopup("Command Palette");
+    }
+
+    if (ImGui::BeginPopupModal("Command Palette", &showCommandPalette, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::SetWindowFontScale(1.2f);
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.0f, 1.0f), ">");
+        ImGui::SameLine();
+        
+        static char searchBuffer[128] = "";
+        ImGui::SetKeyboardFocusHere();
+        ImGui::PushItemWidth(400);
+        ImGui::InputText("##cmd_search", searchBuffer, sizeof(searchBuffer));
+        ImGui::PopItemWidth();
+        
+        std::string query(searchBuffer);
+        if (!query.empty()) {
+            auto results = Cogent::Editor::UI::UIContext::Get().GetCommandPalette().Search(query);
+            for (const auto& res : results) {
+                if (ImGui::Selectable(res.command->displayName.c_str())) {
+                    res.command->executeCallback();
+                    showCommandPalette = false;
+                    searchBuffer[0] = '\0';
+                }
+                ImGui::SameLine(300);
+                ImGui::TextDisabled("%s", res.command->shortcut.c_str());
+            }
+        }
+        
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            showCommandPalette = false;
+        }
+        ImGui::EndPopup();
+    }
+    
+    if (showSettings) {
+        RenderSettingsPanel();
+    }
+
     // 3. State Machine Logic
     if (currentState == AppState::LOADING) {
         RenderLoadingScreen(currentState);
@@ -136,6 +212,7 @@ void EditorUI::Draw(VkCommandBuffer commandBuffer) {
 }
 
 void EditorUI::Cleanup(VkDevice device) {
+    Cogent::Editor::UI::UIContext::Get().Shutdown();
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
@@ -143,65 +220,65 @@ void EditorUI::Cleanup(VkDevice device) {
 }
 
 // ==================================================================================
-//                              ULTRA MODERN THEME
+//                              ULTRA MODERN THEME (AAA STYLE)
 // ==================================================================================
 
 void EditorUI::ApplyModernDarkTheme() {
     ImGuiStyle& style = ImGui::GetStyle();
     
-    // Spacing & Rounding - Unreal Engine 5 inspired (sleek, slightly rounded but structured)
-    style.WindowPadding     = ImVec2(8.0f, 8.0f);
-    style.FramePadding      = ImVec2(6.0f, 4.0f);
-    style.ItemSpacing       = ImVec2(6.0f, 6.0f);
-    style.ItemInnerSpacing  = ImVec2(6.0f, 4.0f);
-    style.IndentSpacing     = 18.0f;
-    style.ScrollbarSize     = 12.0f;
+    // AAA Style Spacing & Rounding
+    style.WindowPadding     = ImVec2(10.0f, 10.0f);
+    style.FramePadding      = ImVec2(8.0f, 6.0f);
+    style.ItemSpacing       = ImVec2(8.0f, 8.0f);
+    style.ItemInnerSpacing  = ImVec2(6.0f, 6.0f);
+    style.IndentSpacing     = 20.0f;
+    style.ScrollbarSize     = 14.0f;
     
-    // Slightly less rounded corners for a more professional tool look (like UE5)
-    style.WindowRounding    = 4.0f;
-    style.ChildRounding     = 4.0f;
-    style.FrameRounding     = 3.0f;
-    style.PopupRounding     = 4.0f;
-    style.ScrollbarRounding = 4.0f;
-    style.GrabRounding      = 3.0f;
+    // Sleek rounded corners for modern professional look
+    style.WindowRounding    = 8.0f;
+    style.ChildRounding     = 6.0f;
+    style.FrameRounding     = 4.0f;
+    style.PopupRounding     = 8.0f;
+    style.ScrollbarRounding = 12.0f;
+    style.GrabRounding      = 4.0f;
     style.TabRounding       = 4.0f;
     
-    // Borders
+    // Minimalist Borders
     style.WindowBorderSize  = 1.0f;
-    style.FrameBorderSize   = 1.0f;
+    style.FrameBorderSize   = 0.0f; // Flat inputs
     style.PopupBorderSize   = 1.0f;
 
-    // Modern color palette - Deep dark slate (UE5 style)
+    // Modern color palette - Obsidian / Carbon
     ImVec4* colors = style.Colors;
     
     // Text
-    colors[ImGuiCol_Text]                   = ImVec4(0.85f, 0.85f, 0.85f, 1.00f);
+    colors[ImGuiCol_Text]                   = ImVec4(0.92f, 0.92f, 0.95f, 1.00f);
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     
-    // Backgrounds - Very dark slate
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
-    colors[ImGuiCol_ChildBg]                = ImVec4(0.11f, 0.11f, 0.11f, 1.00f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.98f);
+    // Backgrounds - Deep Slate
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.11f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.12f, 0.12f, 0.13f, 1.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.14f, 0.14f, 0.16f, 0.98f);
     
-    // Borders - Subtle
-    colors[ImGuiCol_Border]                 = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    // Borders
+    colors[ImGuiCol_Border]                 = ImVec4(0.20f, 0.20f, 0.22f, 1.00f);
     colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     
     // Title bars
-    colors[ImGuiCol_TitleBg]                = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
-    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
-    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.08f, 0.08f, 0.09f, 0.51f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
     
     // Frames - Input fields, etc
-    colors[ImGuiCol_FrameBg]                = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
-    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.18f, 0.18f, 0.20f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.22f, 0.22f, 0.25f, 1.00f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.25f, 0.25f, 0.28f, 1.00f);
     
-    // Buttons - UE5 style
-    colors[ImGuiCol_Button]                 = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
-    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-    colors[ImGuiCol_ButtonActive]           = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
+    // Buttons - Accent Color (Subtle Blue)
+    colors[ImGuiCol_Button]                 = ImVec4(0.20f, 0.22f, 0.25f, 1.00f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.25f, 0.35f, 0.55f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.30f, 0.45f, 0.70f, 1.00f);
     
     // Accent color - Electric blue
     colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 0.44f, 0.88f, 1.00f);
@@ -218,12 +295,16 @@ void EditorUI::ApplyModernDarkTheme() {
     colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
     colors[ImGuiCol_SeparatorActive]        = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
     
-    // Tabs
-    colors[ImGuiCol_Tab]                    = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
-    colors[ImGuiCol_TabHovered]             = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
-    colors[ImGuiCol_TabActive]              = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
-    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.12f, 0.12f, 0.12f, 1.00f);
+    // Tabs - Modern flat tabs
+    colors[ImGuiCol_Tab]                    = ImVec4(0.15f, 0.15f, 0.17f, 1.00f);
+    colors[ImGuiCol_TabHovered]             = ImVec4(0.20f, 0.25f, 0.35f, 1.00f);
+    colors[ImGuiCol_TabActive]              = ImVec4(0.25f, 0.35f, 0.55f, 1.00f);
+    colors[ImGuiCol_TabUnfocused]           = ImVec4(0.12f, 0.12f, 0.14f, 1.00f);
+    colors[ImGuiCol_TabUnfocusedActive]     = ImVec4(0.15f, 0.20f, 0.30f, 1.00f);
+    
+    // Docking
+    colors[ImGuiCol_DockingPreview]         = ImVec4(0.30f, 0.45f, 0.70f, 0.30f);
+    colors[ImGuiCol_DockingEmptyBg]         = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
     
     // Scrollbar
     colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
@@ -532,11 +613,40 @@ void EditorUI::RenderProjectHub(AppState& currentState, bool& showCursor) {
         
         ImGui::SameLine();
         
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.30f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.35f, 0.50f, 1.0f));
         
-        // Trigger generic folder popup (which is robust)
         if (ImGui::Button("Browse...", ImVec2(100, 0))) {
-            openFolderPopup = true; 
+#ifdef _WIN32
+            // NATIVE WINDOWS FILE DIALOG
+            HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+            IFileOpenDialog *pFileOpen;
+            hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+            if (SUCCEEDED(hr)) {
+                DWORD dwOptions;
+                if (SUCCEEDED(pFileOpen->GetOptions(&dwOptions))) {
+                    pFileOpen->SetOptions(dwOptions | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+                }
+                hr = pFileOpen->Show(GetForegroundWindow());
+                if (SUCCEEDED(hr)) {
+                    IShellItem *pItem;
+                    hr = pFileOpen->GetResult(&pItem);
+                    if (SUCCEEDED(hr)) {
+                        PWSTR pszFilePath;
+                        hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+                        if (SUCCEEDED(hr)) {
+                            char buffer[512];
+                            WideCharToMultiByte(CP_UTF8, 0, pszFilePath, -1, buffer, 512, NULL, NULL);
+                            selectedPath = buffer;
+                            CoTaskMemFree(pszFilePath);
+                        }
+                        pItem->Release();
+                    }
+                }
+                pFileOpen->Release();
+            }
+#else
+            openFolderPopup = true; // Fallback to ImGui file browser on Linux/Mac
+#endif
         }
         
         ImGui::PopStyleColor();
@@ -831,17 +941,20 @@ void EditorUI::RenderFolderBrowserModal() {
         ImGuiID dock_down;
         ImGuiID dock_left;
         ImGuiID dock_right;
+        ImGuiID dock_nvs;
 
         // Split Layout
         ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.25f, &dock_down, &dock_up);
         ImGui::DockBuilderSplitNode(dock_up, ImGuiDir_Left, 0.2f, &dock_left, &dock_main_id);
         ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, &dock_right, &dock_main_id);
+        ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.5f, &dock_nvs, &dock_main_id);
 
         // Dock Windows
         ImGui::DockBuilderDockWindow("Scene View", dock_main_id);
         ImGui::DockBuilderDockWindow("Hierarchy", dock_left);
         ImGui::DockBuilderDockWindow("Inspector", dock_right);
         ImGui::DockBuilderDockWindow("Console", dock_down);
+        ImGui::DockBuilderDockWindow("NVS Studio - Node Canvas", dock_nvs);
         ImGui::DockBuilderDockWindow("Toolbar", dock_up); // Put toolbar on top if possible or floating
 
         ImGui::DockBuilderFinish(dockspace_id);
@@ -866,10 +979,19 @@ void EditorUI::RenderFolderBrowserModal() {
             if (ImGui::MenuItem("Exit", "Alt+F4")) exit(0);
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Settings", "Ctrl+,")) {
+                showSettings = true;
+            }
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Window")) {
             ImGui::MenuItem("Scene", NULL, true);
             ImGui::MenuItem("Inspector", NULL, true);
             ImGui::MenuItem("Hierarchy", NULL, true);
+            if (ImGui::MenuItem("Engine Settings")) {
+                showSettings = true;
+            }
             ImGui::EndMenu();
         }
              
@@ -1077,11 +1199,38 @@ void EditorUI::RenderFolderBrowserModal() {
         }
     ImGui::End();
 
-    // 6. Hierarchy Panel
+    // 5. Hierarchy
     RenderHierarchy(gameObjects, selectedIndex, camera, onSpawn);
 
-    // 7. Console Panel
+    // 6. Console
     RenderConsole();
+    
+    // 7. Inspector (with Phase 3 PropertyInspector)
+    ImGui::Begin("Inspector");
+    if (selectedIndex >= 0 && selectedIndex < gameObjects.size()) {
+        propertyInspector.Clear();
+        
+        // Dynamically create cards based on selected object
+        Cogent::Editor::UI::InspectorCard transformCard;
+        transformCard.headerName = "Transform";
+        transformCard.AddField("Position", Cogent::Editor::UI::PropertyType::VECTOR3, glm::value_ptr(gameObjects[selectedIndex].model[3]));
+        
+        Cogent::Editor::UI::InspectorCard meshCard;
+        meshCard.headerName = "GameObject Data";
+        meshCard.AddField("Name", Cogent::Editor::UI::PropertyType::STRING, &gameObjects[selectedIndex].name);
+        
+        propertyInspector.AddCard(transformCard);
+        propertyInspector.AddCard(meshCard);
+        
+        // Let PropertyInspector render real ImGui widgets
+        propertyInspector.RenderImGui();
+    } else {
+        ImGui::TextDisabled("Select an object to inspect.");
+    }
+    ImGui::End();
+
+    // 8. NVS Studio (Phase 3 NodeCanvas)
+    nodeCanvas.RenderImGui();
 }
 
 // Tambahkan parameter list object dan index yang dipilih
@@ -1190,5 +1339,82 @@ void EditorUI::RenderConsole() {
         ImGui::SetScrollHereY(1.0f);
         
     ImGui::EndChild();
+    ImGui::End();
+}
+
+// ==================================================================================
+//                              SETTINGS PANEL
+// ==================================================================================
+void EditorUI::RenderSettingsPanel() {
+    ImGui::SetNextWindowSize(ImVec2(900, 600), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Engine Settings", &showSettings, ImGuiWindowFlags_NoCollapse)) {
+        
+        // Split layout for Settings (Left: Categories, Right: Options)
+        ImGui::BeginChild("SettingsTabs", ImVec2(200, 0), true);
+        
+        const char* tabs[] = { "Graphics", "Editor", "Workspace", "Audio", "Physics", "AI Runtime", "Network", "Build", "Plugin", "Asset Pipeline" };
+        for (int i = 0; i < IM_ARRAYSIZE(tabs); i++) {
+            bool selected = (selectedSettingsTab == i);
+            if (ImGui::Selectable(tabs[i], selected, 0, ImVec2(0, 30))) {
+                selectedSettingsTab = i;
+            }
+        }
+        ImGui::EndChild();
+        
+        ImGui::SameLine();
+        
+        ImGui::BeginChild("SettingsContent", ImVec2(0, 0), true);
+        ImGui::PushItemWidth(300);
+        
+        ImGui::TextColored(ImVec4(0.35f, 0.65f, 1.0f, 1.0f), "%s Settings", tabs[selectedSettingsTab]);
+        ImGui::Separator();
+        ImGui::Dummy(ImVec2(0, 10));
+        
+        if (selectedSettingsTab == 0) { // Graphics
+            ImGui::Text("Renderer API");
+            const char* apis[] = { "Vulkan", "DirectX 12 (Experimental)" };
+            ImGui::Combo("##API", &config_RendererAPI, apis, IM_ARRAYSIZE(apis));
+            
+            ImGui::Dummy(ImVec2(0, 5));
+            ImGui::Text("GPU Selection");
+            const char* gpus[] = { "Auto (High Performance)", "NVIDIA GeForce RTX 4090", "Intel(R) UHD Graphics" }; // Mock for now
+            ImGui::Combo("##GPU", &config_GPUSelection, gpus, IM_ARRAYSIZE(gpus));
+            
+            ImGui::Dummy(ImVec2(0, 5));
+            ImGui::Checkbox("Fullscreen", &config_Fullscreen);
+            ImGui::Checkbox("VSync", &config_VSync);
+            
+            ImGui::Dummy(ImVec2(0, 10));
+            ImGui::Separator();
+            ImGui::Dummy(ImVec2(0, 5));
+            
+            ImGui::Text("Advanced Features");
+            ImGui::Checkbox("Ray Tracing (Hardware)", &config_RayTracing);
+            ImGui::Checkbox("Global Illumination", &config_GlobalIllumination);
+            ImGui::Checkbox("Frame Generation", &config_FrameGen);
+            
+            ImGui::Dummy(ImVec2(0, 5));
+            ImGui::Text("Texture Quality");
+            const char* texQual[] = { "Low", "Medium", "High", "Ultra" };
+            ImGui::Combo("##Tex", &config_TextureQuality, texQual, IM_ARRAYSIZE(texQual));
+            
+            ImGui::SliderFloat("Render Scale", &config_RenderScale, 0.5f, 2.0f, "%.2fx");
+        } else if (selectedSettingsTab == 1) { // Editor
+            ImGui::Text("Theme (Requires Restart)");
+            ImGui::Button("AAA Dark (Active)", ImVec2(150, 30));
+            
+            ImGui::Dummy(ImVec2(0, 10));
+            ImGui::Text("UI Scale");
+            static float uiScale = 1.0f;
+            if (ImGui::SliderFloat("##UIScale", &uiScale, 0.5f, 2.0f, "%.1fx")) {
+                // Changing UI scale dynamically in ImGui can be tricky, needs font reloading.
+            }
+        } else {
+            ImGui::TextDisabled("Settings for this category are under construction.");
+        }
+        
+        ImGui::PopItemWidth();
+        ImGui::EndChild();
+    }
     ImGui::End();
 }

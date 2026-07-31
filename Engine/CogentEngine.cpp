@@ -152,17 +152,29 @@ void CogentEngine::initResources() {
     gridPipeline.init(graphicsDevice.getDevice(), gBuffer.getRenderPass(), {WIDTH, HEIGHT}, { descriptorSetLayout });
     
     LOG_INFO("Generating Primitive Meshes...");
-    meshes.resize(3);
+    meshes.resize(4); // 0=Cube, 1=Sphere, 2=Capsule, 3=Plane
     PrimitiveMesh generator;
 
     generator.createCube();
     meshes[0].loadFromMesh(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), generator.vertices, generator.indices);
 
-    generator.createSphere(1.0f, 32, 32);
+    generator.createSphere(1.0f, 64, 64);
     meshes[1].loadFromMesh(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), generator.vertices, generator.indices);
 
     generator.createCapsule(0.5f, 2.0f, 32, 16);
     meshes[2].loadFromMesh(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), generator.vertices, generator.indices);
+
+    // Plane mesh for ground
+    generator.vertices.clear();
+    generator.indices.clear();
+    // Vertex: {pos}, {color}, {normal}, {texCoord}
+    // Color default to white, normal up, texCoord mapped
+    generator.vertices.push_back({{-5.0f, 0.0f, -5.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}});
+    generator.vertices.push_back({{ 5.0f, 0.0f, -5.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}});
+    generator.vertices.push_back({{ 5.0f, 0.0f,  5.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}});
+    generator.vertices.push_back({{-5.0f, 0.0f,  5.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}});
+    generator.indices = {0, 1, 2, 2, 3, 0};
+    meshes[3].loadFromMesh(graphicsDevice.getDevice(), graphicsDevice.getPhysicalDevice(), generator.vertices, generator.indices);
 
     createTextureSampler(); 
     // createLightingDescriptors();  // REMOVED: Handled by DeferredLightingPass
@@ -216,35 +228,30 @@ void CogentEngine::initResources() {
 
     LOG_INFO("Spawning Demo Scene...");
     
-    // 1. Center Cube (White Texture)
+    // 0. Ground Plane (Z is up, so place at Z=-1)
+    spawnObject(3, glm::vec3(0.0f, 0.0f, -1.0f)); 
+    gameObjects.back().name = "Ground Plane";
+    gameObjects.back().color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    gameObjects.back().model = glm::scale(gameObjects.back().model, glm::vec3(5.0f, 5.0f, 1.0f)); // Scale X and Y
+    
+    // 1. Center Red Cube
     spawnObject(0, glm::vec3(0.0f, 0.0f, 0.0f)); 
+    gameObjects.back().name = "Center Cube";
+    gameObjects.back().color = glm::vec4(1.0f, 0.1f, 0.1f, 1.0f); // Merah
     
-    // 2. Surrounding Lights (Spheres with Bright Colors)
-    // We use meshID 1 (Sphere) and manually set color/name
-    
-    // Right (Red)
+    // 2. White Emissive Sphere (will orbit)
     spawnObject(1, glm::vec3(2.5f, 0.0f, 0.0f));
-    gameObjects.back().name = "Light_Red";
-    gameObjects.back().color = glm::vec4(2.0f, 0.2f, 0.2f, 1.0f); // >1.0 for manual bloom/emissive look if supported, else just bright
-    
-    // Left (Blue)
-    spawnObject(1, glm::vec3(-2.5f, 0.0f, 0.0f));
-    gameObjects.back().name = "Light_Blue";
-    gameObjects.back().color = glm::vec4(0.2f, 0.2f, 2.0f, 1.0f);
+    gameObjects.back().name = "Orbiting Emissive Sphere";
+    gameObjects.back().color = glm::vec4(10.0f, 10.0f, 10.0f, 1.0f); // Emissive white
 
-    // Front (Green)
-    spawnObject(1, glm::vec3(0.0f, 2.5f, 0.0f)); // Y is Up/Forward depending on coord system. Vulkan Y is down, Z is depth? 
-    // Let's assume Z is depth for now based on previous camera setup
-    gameObjects.back().name = "Light_Green";
-    gameObjects.back().color = glm::vec4(0.2f, 2.0f, 0.2f, 1.0f);
+    // Additional Lights for ambient
+    spawnObject(1, glm::vec3(-3.0f, 3.0f, 2.0f));
+    gameObjects.back().name = "Point Light (Blue)";
+    gameObjects.back().color = glm::vec4(0.2f, 0.2f, 5.0f, 1.0f);
 
-    // Back (Yellow) - Adjusted position to be visible
-    spawnObject(1, glm::vec3(0.0f, -2.5f, 0.0f));
-    gameObjects.back().name = "Light_Yellow";
-    gameObjects.back().color = glm::vec4(2.0f, 2.0f, 0.2f, 1.0f);
-    
-    // Sun
-    // Sun is a sphere (meshID=1, handled specially inside spawnObject)
+    spawnObject(1, glm::vec3(3.0f, -3.0f, 2.0f));
+    gameObjects.back().name = "Point Light (Orange)";
+    gameObjects.back().color = glm::vec4(5.0f, 2.5f, 0.2f, 1.0f);
 }
 
 void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
@@ -262,6 +269,7 @@ void CogentEngine::spawnObject(int meshID, glm::vec3 position) {
     if (meshID == 0) obj.name = "Cube " + std::to_string(obj.id);
     else if (meshID == 1) obj.name = "Sphere " + std::to_string(obj.id);
     else if (meshID == 2) obj.name = "Capsule " + std::to_string(obj.id);
+    else if (meshID == 3) obj.name = "Plane " + std::to_string(obj.id);
     else obj.name = "Object " + std::to_string(obj.id);
     
     obj.model = glm::translate(glm::mat4(1.0f), position);
@@ -292,23 +300,22 @@ void CogentEngine::mainLoop() {
 
         // Animate objects for TAA & Motion Vector Testing
         if (currentState == AppState::EDITOR && !gameObjects.empty()) {
-            // Cube rotates slowly
-            if (gameObjects[0].meshID == 0) { // Center Cube
-                gameObjects[0].model = glm::rotate(glm::mat4(1.0f), currentFrame * 0.5f, glm::vec3(0.0f, 1.0f, 0.0f));
+            // Cube rotates slowly (Index 1 is the Cube, 0 is the Plane)
+            if (gameObjects.size() > 1 && gameObjects[1].meshID == 0) { 
+                gameObjects[1].model = glm::rotate(glm::mat4(1.0f), currentFrame * 0.5f, glm::vec3(0.0f, 0.0f, 1.0f)); // Rotate around Z
             }
             
-            // Lights (id 1 to 4) orbit around the cube
-            float radius = 3.5f;
-            float speed = 1.2f;
-            for (int i = 1; i <= 4 && i < gameObjects.size(); ++i) {
-                float angle = currentFrame * speed + (i * glm::half_pi<float>());
+            // Orbiting Sphere (Index 2)
+            if (gameObjects.size() > 2) {
+                float radius = 2.5f;
+                float speed = 1.5f;
+                float angle = currentFrame * speed;
                 float x = std::cos(angle) * radius;
-                float z = std::sin(angle) * radius;
+                float y = std::sin(angle) * radius; // Orbit in XY plane
                 
-                // Bobbing up and down
-                float y = std::sin(currentFrame * 2.0f + i) * 1.0f;
-                
-                gameObjects[i].model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, z));
+                gameObjects[2].model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
+                // Scale it down a bit to look like a light source
+                gameObjects[2].model = glm::scale(gameObjects[2].model, glm::vec3(0.5f));
             }
         }
 
@@ -778,7 +785,8 @@ void CogentEngine::updateUniformBuffer() {
 
     CameraUBO ubo{};
     ubo.view = mainCamera.getViewMatrix();
-    ubo.proj = mainCamera.getProjectionMatrix(renderingViewportSize.x / renderingViewportSize.y);
+    float aspect = renderingViewportSize.y > 0 ? (renderingViewportSize.x / renderingViewportSize.y) : 1.777f;
+    ubo.proj = mainCamera.getProjectionMatrix(aspect);
     // NOTE: Y-flip already done inside Camera::getProjectionMatrix()
 
     // For TAA, we should store previous matrices. For now, just use current.

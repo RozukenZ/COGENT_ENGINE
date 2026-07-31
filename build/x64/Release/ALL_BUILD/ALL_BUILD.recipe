@@ -8,7 +8,43 @@
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\COGENT_Engine.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_ai.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_analyzer.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_cts.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_framegen.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_glfw.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_has.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_nai_runtime.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_nvs.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_performance.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_raytracing.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_res.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_telemetry.exe</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
+      <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\Release\test_visibility.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
       <FullPath>D:\MyProject\Backup_COGENT_ENGINE\build\x64\Release\ALL_BUILD</FullPath>

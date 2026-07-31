@@ -399,6 +399,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Vendor\imgui\imgui_widgets.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\EditorUI.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\UIContext.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\CommandPalette.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\DockingSystem.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\PropertyInspector.cpp" />
+    <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Editor\UI\NodeCanvas.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Vendor\ImGuizmo\ImGuizmo.cpp" />
     <ClCompile Include="D:\MyProject\Backup_COGENT_ENGINE\Geometry\PrimitiveMesh.cpp" />
     <ClInclude Include="D:\MyProject\Backup_COGENT_ENGINE\Geometry\PrimitiveMesh.hpp" />
